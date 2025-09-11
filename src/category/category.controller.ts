@@ -10,6 +10,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from 'src/auth/decorator/roles.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { videoStorage } from 'src/cloudinary.video/video-upload.storage';
 
 class FoodCategoryDto {
@@ -51,14 +52,14 @@ export class CategoryController {
     return this.categoryService.findAll();
   }
 
-  @Get(':userId')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get categories by user ID' })
-  @ApiResponse({ status: 200, description: 'List of categories' })
-  findByUser(@Param('userId') userId: number) {
-    return this.categoryService.findByUser(userId);
-  }
+  // @Get(':userId')
+  // @UseGuards(JwtAuthGuard)
+  // @ApiBearerAuth()
+  // @ApiOperation({ summary: 'Get categories by user ID' })
+  // @ApiResponse({ status: 200, description: 'List of categories' })
+  // findByUser(@Param('userId') userId: number) {
+  //   return this.categoryService.findByUser(userId);
+  // }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
@@ -66,7 +67,7 @@ export class CategoryController {
   @ApiOperation({ summary: 'Get a category by ID' })
   @ApiResponse({ status: 200, description: 'Category details' })
   findOne(@Param('id') id: string) {
-    return this.categoryService.findOne(+id);
+    return this.categoryService.findOne(id);
   }
 
   @Put(':id')
@@ -75,7 +76,7 @@ export class CategoryController {
   @ApiOperation({ summary: 'Update a category' })
   @ApiResponse({ status: 200, description: 'Updated category' })
   update(@Param('id') id: string, @Body() updateCategoryDto: UpdateCategoryDto) {
-    return this.categoryService.update(+id, updateCategoryDto);
+    return this.categoryService.update(id, updateCategoryDto);
   }
 
   @Delete(':id')

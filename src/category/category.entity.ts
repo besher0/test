@@ -1,11 +1,13 @@
 /* eslint-disable prettier/prettier */
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne,  } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany,  } from 'typeorm';
 import { User } from '../user/user.entity';
+import { Restaurant } from 'src/restaurant/restaurant.entity';
+import { Meal } from 'src/meal/meal.entity';
 
 @Entity('categories')
 export class Category {
-  @PrimaryGeneratedColumn()
-  category_id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
   name: string;
@@ -18,5 +20,11 @@ export class Category {
 
   @ManyToOne(() => User, user => user.categories)
   user: User;
+
+  @OneToMany(() => Restaurant, (restaurant) => restaurant.category)
+restaurants: Restaurant[];
+
+@OneToMany(() => Meal, (meal) => meal.category)
+meals: Meal[];
 
 }

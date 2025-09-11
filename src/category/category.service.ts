@@ -5,7 +5,6 @@ import { In, Repository } from 'typeorm';
 import { Category } from '../category/category.entity';
 import { CreateCategoryDto } from '../category/dto/create-category.dto';
 import { UpdateCategoryDto } from '../category/dto/update-category.dto';
-import { UserPreferencesService } from 'src/user-preferences/user-preferences.service';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
@@ -13,7 +12,6 @@ export class CategoryService {
   constructor(
     @InjectRepository(Category)
     private categoryRepository: Repository<Category>,
-    private readonly userPreferencesService: UserPreferencesService,
     private cloudinaryService: CloudinaryService, 
 
 
@@ -28,32 +26,32 @@ export class CategoryService {
     return this.categoryRepository.find();
   }
 
-async findByUser(userId: number): Promise<Category[]> {
-    const userPreferences = await this.userPreferencesService.findOne({
-      where: { user: { user_id: userId }, preference_type: 'favorite_food' },
-      relations: ['user'],
-    }) || { preference_value: null };
+// async findByUser(userId: number): Promise<Category[]> {
+//     const userPreferences = await this.userPreferencesService.findOne({
+//       where: { user: { user_id: userId }, preference_type: 'favorite_food' },
+//       relations: ['user'],
+//     }) || { preference_value: null };
 
-    const preferredValue = userPreferences?.preference_value || null;
+//     const preferredValue = userPreferences?.preference_value || null;
 
-    return this.categoryRepository
-      .createQueryBuilder('category')
-      .leftJoinAndSelect('category.user', 'user')
-      .leftJoinAndSelect('category.posts', 'posts') 
-      .orderBy(
-        `CASE WHEN category.name = :preferred THEN 0 ELSE 1 END`, 
-        'ASC'
-      )
-      .addOrderBy('category.name', 'ASC') 
-      .setParameter('preferred', preferredValue)
-      .getMany();
+//     return this.categoryRepository
+//       .createQueryBuilder('category')
+//       .leftJoinAndSelect('category.user', 'user')
+//       .leftJoinAndSelect('category.posts', 'posts') 
+//       .orderBy(
+//         `CASE WHEN category.name = :preferred THEN 0 ELSE 1 END`, 
+//         'ASC'
+//       )
+//       .addOrderBy('category.name', 'ASC') 
+//       .setParameter('preferred', preferredValue)
+//       .getMany();
+//   }
+
+  findOne(id: string): Promise<Category> {
+    return this.categoryRepository.findOneOrFail({ where: { id: id } });
   }
 
-  findOne(id: number): Promise<Category> {
-    return this.categoryRepository.findOneOrFail({ where: { category_id: id } });
-  }
-
-  update(id: number, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
+  update(id: string, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
     return this.categoryRepository.update(id, updateCategoryDto).then(() => this.findOne(id));
   }
 

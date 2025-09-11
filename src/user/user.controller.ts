@@ -5,6 +5,7 @@ import { CreateUserDto } from '../user/dto/create-user.dto';
 import { UpdateUserDto } from '../user/dto/update-user.dto';
 import { AuthService } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorator/roles.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
@@ -81,7 +82,7 @@ export class UserController {
   @ApiOperation({ summary: 'Get a user by ID' })
   @ApiResponse({ status: 200, description: 'User details' })
   findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
+    return this.userService.findOne(id);
   }
 
   @Put(':id')
@@ -90,10 +91,10 @@ export class UserController {
   @ApiOperation({ summary: 'Update a user' })
   @ApiResponse({ status: 200, description: 'Updated user' })
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto  , @CurrentUser() currentUser: User,) {
-     if (currentUser.user_id !== +id && currentUser.userType !== 'admin') {
+     if (currentUser.id !== id && currentUser.userType !== 'admin') {
       throw new HttpException('غير مصرح لك بتحديث هذا المستخدم', HttpStatus.FORBIDDEN);
     }
-    return this.userService.update(+id, updateUserDto);
+    return this.userService.update(id, updateUserDto);
   }
 
   @Delete(':id')
@@ -104,7 +105,7 @@ export class UserController {
   @ApiResponse({ status: 200, description: 'User deleted' })
   remove(@Param('id') id: string,    @CurrentUser() currentUser: User,
 ) {
-     if (currentUser.user_id !== +id && currentUser.userType !== 'admin') {
+     if (currentUser.id !== id && currentUser.userType !== 'admin') {
       throw new HttpException('غير مصرح لك بحذف هذا المستخدم', HttpStatus.FORBIDDEN);
     }
     return this.userService.remove(+id);

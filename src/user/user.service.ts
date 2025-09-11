@@ -9,15 +9,12 @@ import { User } from '../user/user.entity';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { UpdateUserDto } from '../user/dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
-import { UserPreferencesService } from '../user-preferences/user-preferences.service';
-import { CreateUserPreferencesDto } from '../user-preferences/dto/create-user-preferences.dto';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    private preferencesService: UserPreferencesService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -45,12 +42,13 @@ export class UserService {
     const savedUser = await this.userRepository.save(user);
 
 if (savedUser.userType === 'normalUser' && createUserDto.favoriteFood) {
-      const preference: CreateUserPreferencesDto = {
-        user: savedUser,
-        preference_type: 'favorite_food',
-        preference_value: createUserDto.favoriteFood,
-      };
-      await this.preferencesService.create(preference);
+      // const preference: CreateUserPreferencesDto = {
+      //   user: savedUser,
+      //   preference_type: 'favorite_food',
+      //   preference_value: createUserDto.favoriteFood,
+      // };
+      // await this.preferencesService.create(preference);
+      savedUser.favoriteFood=createUserDto.favoriteFood
     }
     return savedUser;
   }
@@ -59,15 +57,15 @@ async findAll(): Promise<User[]> {
   return this.userRepository.find(); 
 }
 
-  async findOne(id: number): Promise<User | null> {
-    return this.userRepository.findOne({ where: { user_id: id } });
+  async findOne(id: string): Promise<User | null> {
+    return this.userRepository.findOne({ where: { id: id } });
   }
 
   async findOneByEmail(email: string): Promise<User> {
     return this.userRepository.findOneOrFail({ where: { email } });
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto) {
+  async update(id: string, updateUserDto: UpdateUserDto) {
     
 const user = await this.findOne(id);
   if (!user) {
@@ -86,7 +84,6 @@ const user = await this.findOne(id);
   }
 
   async remove(id: number): Promise<void> {
-      await this.preferencesService.deleteByUserId(id);
 
     await this.userRepository.delete(id);
   }

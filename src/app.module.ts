@@ -6,12 +6,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from './user/user.module';
 import { CategoryModule } from './category/category.module';
 
-import { UserPreferencesModule } from './user-preferences/user-preferences.module';
 import { VideoModule } from './cloudinary.video/video.module';
 
 import {dataSourceOptions} from '../db/data-source'
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { RestaurantModule } from './restaurant/restaurant.module';
+import { MealModule } from './meal/meal.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -22,8 +23,8 @@ import { AppService } from './app.service';
     UserModule,
     VideoModule,
     CategoryModule,
-
-    UserPreferencesModule,
+    RestaurantModule,
+    MealModule
   ],
 controllers:[AppController],
 providers:[AppService]
