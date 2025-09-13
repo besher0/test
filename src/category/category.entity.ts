@@ -10,11 +10,11 @@ export class Category {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-    @ApiProperty({ example: "Italiano Pizza" })
+  @ApiProperty({ example: "Italiano Pizza" })
   @Column()
   name: string;
 
-    @ApiProperty({ example: "ingredients Italiano pizza" })
+  @ApiProperty({ example: "ingredients Italiano pizza" })
   @Column()
   description: string;
 

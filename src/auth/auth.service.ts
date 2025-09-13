@@ -16,7 +16,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async login(email: string, password: string): Promise<{ access_token: string }> {
+  async login(email: string, password: string) {
     const user = await this.userService.findOneByEmail(email);
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new UnauthorizedException('Invalid credentials');
@@ -24,6 +24,9 @@ export class AuthService {
     const payload = { sub: user.id, userType: user.userType };
     return {
       access_token: this.jwtService.sign(payload),
+      user_Id:user.id,
+      favoriteFood:user.favoriteFood,
+      userType:user.userType
     };
   }
 
