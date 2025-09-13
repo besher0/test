@@ -22,6 +22,7 @@ export class UserController {
   ) {}
 
   @Post('register')
+  @ApiBody({ schema: { example: {"id": "11111111-1111-4111-8111-111111111111", "firstName": "John", "lastName": "Doe", "email": "john.doe@example.com", "password": "StrongPass123!"} } })
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({ status: 201, description: 'User created' })
   create(@Body() createUserDto: CreateUserDto) {
@@ -67,6 +68,7 @@ export class UserController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get endpoint' })
   @UseGuards(JwtAuthGuard)
   @Roles('admin')
   @ApiBearerAuth()
@@ -77,6 +79,7 @@ export class UserController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get endpoint' })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a user by ID' })
@@ -86,6 +89,8 @@ export class UserController {
   }
 
   @Put(':id')
+  @ApiOperation({ summary: 'Put endpoint' })
+  @ApiBody({ schema: { example: {"id": "11111111-1111-4111-8111-111111111111", "firstName": "John", "lastName": "Doe", "email": "john.doe@example.com", "password": "StrongPass123!"} } })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a user' })
@@ -98,6 +103,7 @@ export class UserController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete endpoint' })
   @UseGuards(JwtAuthGuard,)
   @Roles('admin')
   @ApiBearerAuth()

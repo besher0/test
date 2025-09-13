@@ -3,18 +3,22 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany,  } from '
 import { User } from '../user/user.entity';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { Meal } from 'src/meal/meal.entity';
+import { ApiProperty } from '@nestjs/swagger';
 
 @Entity('categories')
 export class Category {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+    @ApiProperty({ example: "Italiano Pizza" })
   @Column()
   name: string;
 
+    @ApiProperty({ example: "ingredients Italiano pizza" })
   @Column()
   description: string;
 
+  @ApiProperty({ example: "https://example.com/image.jpg" })
   @Column({ name: 'image_url', nullable: true })
   image_url: string;
 

@@ -12,12 +12,14 @@ import { User } from 'src/user/user.entity';
 import { Category } from 'src/category/category.entity';
 import { Meal } from 'src/meal/meal.entity';
 import { Rating } from 'src/rating/rating.entity';
+import { ApiProperty } from '@nestjs/swagger';
 
 @Entity()
 export class Restaurant {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+    @ApiProperty({ example: "sultani Pizza" })
   @Column()
   name: string;
 

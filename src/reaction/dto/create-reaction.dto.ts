@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { IsEnum, IsNotEmpty, IsUUID } from 'class-validator';
 import { ReactionType } from '../reaction.entity';
 

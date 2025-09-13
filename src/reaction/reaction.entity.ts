@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { User } from 'src/user/user.entity';
 import { Post } from 'src/post/post.entity';
+import { ApiProperty } from '@nestjs/swagger';
 
 export enum ReactionType {
   LIKE = 'like',
@@ -19,9 +20,12 @@ export enum ReactionType {
 @Entity('reactions')
 @Unique(['user','post'])
 export class Reaction {
+  @ApiProperty({ required: true })
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+    @ApiProperty({ example: "like" })
+  @ApiProperty({ required: true })
   @Column({
     type: 'enum',
     enum: ReactionType,

@@ -7,9 +7,12 @@ import {
 } from 'typeorm';
 import { Cart } from './cart.entity';
 import { Meal } from 'src/meal/meal.entity';
+import { ApiProperty } from '@nestjs/swagger';
+
 
 @Entity()
 export class CartItem {
+  @ApiProperty({ required: true })
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -19,6 +22,7 @@ export class CartItem {
   @ManyToOne(() => Meal, { eager: true })
   meal: Meal;
 
+  @ApiProperty({ required: true })
   @Column({ default: 1 })
   quantity: number;
 }

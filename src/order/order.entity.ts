@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { User } from 'src/user/user.entity';
 import { OrderItem } from './order-item.entity';
+import { ApiProperty } from '@nestjs/swagger';
 
 @Entity()
 export class Order {
@@ -22,9 +23,11 @@ export class Order {
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items: OrderItem[];
 
+    @ApiProperty({ required: true })
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
   totalPrice: number;
 
+    @ApiProperty({ required: true })
   @Column({
     type: 'enum',
     enum: ['PENDING', 'CONFIRMED', 'DELIVERED', 'CANCELED'],

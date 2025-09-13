@@ -16,6 +16,8 @@ import { MealModule } from './meal/meal.module';
 import { RatingModule } from './rating/rating.module';
 import { ReactionModule } from './reaction/reaction.module';
 import { PostModule } from './post/post.module';
+import { CartModule } from './cart/cart.module';
+import { OrderModule } from './order/order.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -28,6 +30,8 @@ import { PostModule } from './post/post.module';
     CategoryModule,
     RestaurantModule,
     MealModule,
+    CartModule,
+    OrderModule,
     RatingModule,
     ReactionModule,
     PostModule

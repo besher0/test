@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { IsInt, Min, Max, IsUUID } from 'class-validator';
 
 export class CreateRatingDto {

@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { Order } from './order.entity';
 import { Meal } from 'src/meal/meal.entity';
+import { ApiProperty } from '@nestjs/swagger';
 
 @Entity()
 export class OrderItem {
@@ -16,9 +17,13 @@ export class OrderItem {
   @ManyToOne(() => Meal, { eager: true })
   meal: Meal;
 
+    @ApiProperty({ example: 2 })
+    @ApiProperty({ required: true })
   @Column()
   quantity: number;
 
+  @ApiProperty({ example: 12.5 })
+  @ApiProperty({ required: true })
   @Column('decimal', { precision: 10, scale: 2 })
   price: number;
 
