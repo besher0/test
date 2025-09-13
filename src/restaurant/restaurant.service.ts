@@ -69,4 +69,12 @@ export class RestaurantService {
     const restaurant = await this.findOne(id);
     await this.restaurantRepo.remove(restaurant);
   }
+
+  async findAllSortedByRating(order: 'ASC' | 'DESC' = 'DESC') {
+  return this.restaurantRepo.find({
+    order: { averageRating: order },
+    relations: ['meals', 'owner'],
+  });
+}
+
 }

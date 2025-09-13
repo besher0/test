@@ -11,6 +11,7 @@ import {
 import { User } from 'src/user/user.entity';
 import { Category } from 'src/category/category.entity';
 import { Meal } from 'src/meal/meal.entity';
+import { Rating } from 'src/rating/rating.entity';
 
 @Entity()
 export class Restaurant {
@@ -40,6 +41,13 @@ export class Restaurant {
 
   @OneToMany(() => Meal, (meal) => meal.restaurant)
   meals: Meal[];
+
+  @OneToMany(() => Rating, (rating) => rating.restaurant, { cascade: true })
+  ratings: Rating[];
+
+  @Column({ type: 'float', default: 0 })
+  averageRating: number;
+
 
   @CreateDateColumn()
   createdAt: Date;

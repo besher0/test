@@ -7,6 +7,7 @@ import { CreateMealDto } from './dto/create-meal.dto';
 import { UpdateMealDto } from './dto/update-meal.dto';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { Category } from 'src/category/category.entity';
+import { User } from 'src/user/user.entity';
 
 @Injectable()
 export class MealService {
@@ -17,7 +18,40 @@ export class MealService {
     private restaurantRepo: Repository<Restaurant>,
     @InjectRepository(Category)
     private categoryRepo: Repository<Category>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
+
+async getMealsByUserPreference(userId: string): Promise<Meal[]> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+if (!user.favoriteFood) {
+    return this.mealRepo.find({
+      relations: ['restaurant', 'category'],
+      order: { name: 'ASC' }, 
+    });
+  }
+
+  const meals = await this.mealRepo
+    .createQueryBuilder('meal')
+    .leftJoinAndSelect('meal.restaurant', 'restaurant')
+    .leftJoinAndSelect('meal.category', 'category')
+    .addSelect(`
+      CASE 
+        WHEN category.name = :favoriteFood THEN 0
+        ELSE 1
+      END
+    `, 'customOrder')
+    .orderBy('customOrder', 'ASC')
+    .addOrderBy('meal.name', 'ASC')
+    .setParameter('favoriteFood', user.favoriteFood)
+    .getMany();
+
+  return meals;
+  }
 
   async create(dto: CreateMealDto): Promise<Meal> {
     const restaurant = await this.restaurantRepo.findOne({ where: { id: dto.restaurantId } });

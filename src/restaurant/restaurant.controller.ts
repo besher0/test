@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, Query } from '@nestjs/common';
 import { RestaurantService } from './restaurant.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
@@ -32,4 +32,11 @@ export class RestaurantController {
   remove(@Param('id') id: string) {
     return this.restaurantService.remove(id);
   }
+
+  @Get('sorted/by-rating')
+  async getRestaurantsByRating(
+  @Query('order') order: 'ASC' | 'DESC' = 'DESC',) {
+    return this.restaurantService.findAllSortedByRating(order);
+  } 
+
 }

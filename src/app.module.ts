@@ -13,6 +13,9 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { RestaurantModule } from './restaurant/restaurant.module';
 import { MealModule } from './meal/meal.module';
+import { RatingModule } from './rating/rating.module';
+import { ReactionModule } from './reaction/reaction.module';
+import { PostModule } from './post/post.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -24,7 +27,10 @@ import { MealModule } from './meal/meal.module';
     VideoModule,
     CategoryModule,
     RestaurantModule,
-    MealModule
+    MealModule,
+    RatingModule,
+    ReactionModule,
+    PostModule
   ],
 controllers:[AppController],
 providers:[AppService]

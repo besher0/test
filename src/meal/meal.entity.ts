@@ -27,9 +27,6 @@ export class Meal {
   @Column({ nullable: true })
   image_url: string;
 
-  @Column({ default: true })
-  isAvailable: boolean;
-
   @ManyToOne(() => Restaurant, (restaurant) => restaurant.meals, {
     onDelete: 'CASCADE',
   })
