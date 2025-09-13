@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UserService } from '../user/user.service';
@@ -14,8 +14,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: { sub: string; userType: string }) {
-    const user = await this.userService.findOne(payload.sub);
-    return { userId: payload.sub, userType: payload.userType };
-  }
+async validate(payload: { id: string; userType: string }) {
+  const user = await this.userService.findOne(payload.id);
+  if (!user) throw new UnauthorizedException('User not found');
+
+  return {
+    id: user.id,
+    userType: user.userType, // ناخد من DB مش من payload
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+  };
+}
+
 }

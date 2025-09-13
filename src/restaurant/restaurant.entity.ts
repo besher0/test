@@ -7,6 +7,7 @@ import {
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
+  JoinColumn,
 } from 'typeorm';
 import { User } from 'src/user/user.entity';
 import { Category } from 'src/category/category.entity';
@@ -54,6 +55,7 @@ export class Restaurant {
     type: () => User 
   })
   @ManyToOne(() => User, (user) => user.restaurants, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'ownerId' })
   owner: User;
 
   @ApiProperty({ 

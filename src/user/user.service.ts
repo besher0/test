@@ -48,7 +48,7 @@ export class UserService {
 if (savedUser.userType === 'normalUser' && createUserDto.favoriteFood) {
       savedUser.favoriteFood=createUserDto.favoriteFood
     }
-  const payload = { sub: savedUser.id, email: savedUser.email, role: savedUser.userType };
+  const payload = { id: savedUser.id, email: savedUser.email, userType: savedUser.userType };
   const accessToken = await this.jwtService.signAsync(payload);
 
   return {

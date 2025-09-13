@@ -21,16 +21,15 @@ export class AuthService {
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    const payload = { sub: user.id, userType: user.userType };
+    const payload = { id: user.id, userType: user.userType };
     return {
       access_token: this.jwtService.sign(payload),
-      user_Id:user.id,
-      favoriteFood:user.favoriteFood,
-      userType:user.userType
+    user: user,
+
     };
   }
 
-  async register(createUserDto: CreateUserDto): Promise<{ user: User; accessToken: string }>{
+  async register(createUserDto: CreateUserDto){
     return this.userService.create(createUserDto);
   }
 

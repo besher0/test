@@ -1,18 +1,26 @@
 /* eslint-disable prettier/prettier */
-import { Controller, Get, Post, Body, Param,  Delete, Query, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param,  Delete, Query, Put, UseGuards,  } from '@nestjs/common';
 import { RestaurantService } from './restaurant.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiNotFoundResponse, ApiBadRequestResponse, ApiOkResponse, ApiQuery,  } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiNotFoundResponse, ApiBadRequestResponse, ApiOkResponse, ApiQuery, ApiBearerAuth,  } from '@nestjs/swagger';
 import { Restaurant } from './restaurant.entity';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
+import { User } from 'src/user/user.entity';
+import { RestaurantGuard } from 'src/auth/guards/restaurant.guard';
 
 
 @ApiTags('Restaurants')
 @Controller('restaurants')
 export class RestaurantController {
-  constructor(private readonly restaurantService: RestaurantService) {}
+  constructor(
+    private readonly restaurantService: RestaurantService,
+    
+  ) {}
 
   @Post()
+@UseGuards(JwtAuthGuard, RestaurantGuard)  @ApiBearerAuth()
 @ApiOperation({ summary: 'Create a new restaurant' })
   @ApiBody({ 
     type: CreateRestaurantDto,  // يستخدم examples من الـ DTO
@@ -22,16 +30,22 @@ export class RestaurantController {
     type: Restaurant,  // يولد examples تلقائيًا من الـ Entity
     description: 'Restaurant created successfully'
   })
-  @ApiResponse({ 
+@ApiResponse({ 
     status: 201, 
     description: 'Created',
     schema: { 
       example: {
-        id: '33333333-3333-4333-8333-333333333333',
+        id: 'cb20978d-f263-458d-9ef5-23eaba15d62e',
         name: 'Italiano Pizza',
         location: '123 Main Street, New York',
-        ownerId: '11111111-1111-4111-8111-111111111111',
-        categoryId: '22222222-2222-4222-8222-222222222222',
+        Identity: 'RESTAURANT-12345',
+        logo_url: 'https://example.com/logo.png',
+        owner: {
+          id: '11111111-1111-4111-8111-111111111111',
+          userType: 'restaurant',
+          name: 'John Doe' // مثال للاسم
+        },
+        // categoryId: '22222222-2222-4222-8222-222222222222',
         averageRating: 4.7,
         createdAt: '2025-09-13T10:00:00.000Z',
         updatedAt: '2025-09-13T10:00:00.000Z'
@@ -58,8 +72,10 @@ export class RestaurantController {
       }
     }
   })
-  create(@Body() dto: CreateRestaurantDto) {
-    return this.restaurantService.create(dto);
+  create(@Body() dto: CreateRestaurantDto,
+   @CurrentUser() currentUser: User) {
+  console.log('[Controller.create] currentUser =', currentUser);
+    return this.restaurantService.create(dto,currentUser);
   }
 
   @Get()

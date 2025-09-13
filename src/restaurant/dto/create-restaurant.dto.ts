@@ -38,18 +38,18 @@ export class CreateRestaurantDto {
   @IsString()
   logo_url?: string;
 
-  @ApiProperty({ 
-    description: 'Category ID',
-    required: false,
-    example: '22222222-2222-4222-8222-222222222222'  
-  })
+  // @ApiProperty({ 
+  //   // description: 'Category ID',
+  //   required: false,
+  //   // example: '22222222-2222-4222-8222-222222222222'  
+  // })
   @IsOptional()
   categoryId?: string;
 
-  @ApiProperty({ 
-    description: 'Owner ID',
-    example: '11111111-1111-4111-8111-111111111111'  
-  })
-  @IsNotEmpty()
-  ownerId: string;
+  // @ApiProperty({ 
+  //   description: 'Owner ID',
+  //   example: '11111111-1111-4111-8111-111111111111'  
+  // })
+  // @IsNotEmpty()
+  // ownerId: string;
 }

@@ -8,6 +8,17 @@ import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import { User } from 'src/user/user.entity';
 import { Category } from 'src/category/category.entity';
 
+// واجهة Response مخصصة
+export interface RestaurantResponse extends Omit<Restaurant, 'owner'> {
+  owner: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    userType: string;
+    email: string;
+  };
+}
+
 @Injectable()
 export class RestaurantService {
   constructor(
@@ -19,42 +30,95 @@ export class RestaurantService {
     private categoryRepo: Repository<Category>,
   ) {}
 
-  async create(dto: CreateRestaurantDto): Promise<Restaurant> {
-    const owner = await this.userRepo.findOne({ where: { id: dto.ownerId } });
-    if (!owner) throw new NotFoundException('Owner not found');
+  private mapOwner(user: User) {
+      if (!user) return null;
+console.log(user)
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      userType: user.userType,
+      email: user.email,
+    };
+  }
 
-    let category: Category | null = null;
-    if (dto.categoryId) {
-      category = await this.categoryRepo.findOne({ where: { id: dto.categoryId } });
+  async create(dto: CreateRestaurantDto, currentUser: User) {
+    console.log(currentUser)
+
+    if (currentUser.userType !== 'restaurant') {
+      throw new NotFoundException('Only restaurant owners can create restaurants');
     }
 
+    // let category: Category | null = null;
+    // if (dto.categoryId) {
+    //   category = await this.categoryRepo.findOne({ where: { id: dto.categoryId } });
+    //   if (!category) throw new NotFoundException('Category not found');
+    // }
+      const owner = await this.userRepo.findOne({ where: { id: currentUser.id } });
+      console.log('[Service.create] owner from DB =', owner && { id: owner.id, userType: owner.userType });
+
+  if (!owner) throw new NotFoundException('Owner not found');
     const restaurant = this.restaurantRepo.create({
-      name: dto.name,
-      location: dto.location,
+      ...dto,
       owner,
-      category,
     });
 
-    return this.restaurantRepo.save(restaurant);
+    const saved = await this.restaurantRepo.save(restaurant);
+
+ return {
+      ...saved,
+      owner: this.mapOwner(owner), // ✅ مالك كامل
+  };
   }
 
-  async findAll(): Promise<Restaurant[]> {
-    return this.restaurantRepo.find({
+  async findAll() {
+  const restaurants = await this.restaurantRepo.find({
+    relations: ['owner', 'category'], // ✅ بس
+  });
+
+  return restaurants.map((r) => ({
+    id: r.id,
+    name: r.name,
+    location: r.location,
+    Identity: r.Identity,
+    logo_url: r.logo_url,
+    averageRating: r.averageRating,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+    owner: this.mapOwner(r.owner), // ✅ خلي المالك كامل
+  }));;
+}
+
+
+  async findOne(id: string){
+    const restaurant = await this.restaurantRepo.findOne({
+      where: { id },
       relations: ['owner', 'category'],
+    
     });
+
+    if (!restaurant) throw new NotFoundException('Restaurant not found');
+
+  return {
+    id: restaurant.id,
+    name: restaurant.name,
+    location: restaurant.location,
+    Identity: restaurant.Identity,
+    logo_url: restaurant.logo_url,
+    averageRating: restaurant.averageRating,
+    createdAt: restaurant.createdAt,
+    updatedAt: restaurant.updatedAt,
+    owner: this.mapOwner(restaurant.owner),
+  };
   }
 
-  async findOne(id: string): Promise<Restaurant> {
+  async update(id: string, dto: UpdateRestaurantDto){
     const restaurant = await this.restaurantRepo.findOne({
       where: { id },
       relations: ['owner', 'category'],
     });
-    if (!restaurant) throw new NotFoundException('Restaurant not found');
-    return restaurant;
-  }
 
-  async update(id: string, dto: UpdateRestaurantDto): Promise<Restaurant> {
-    const restaurant = await this.findOne(id);
+    if (!restaurant) throw new NotFoundException('Restaurant not found');
 
     if (dto.categoryId) {
       const category = await this.categoryRepo.findOne({ where: { id: dto.categoryId } });
@@ -62,19 +126,47 @@ export class RestaurantService {
     }
 
     Object.assign(restaurant, dto);
-    return this.restaurantRepo.save(restaurant);
+    const updated = await this.restaurantRepo.save(restaurant);
+
+    return {
+      ...updated,
+      owner: this.mapOwner(updated.owner),
+    };
   }
 
   async remove(id: string): Promise<void> {
-    const restaurant = await this.findOne(id);
+    const restaurant = await this.restaurantRepo.findOne({ where: { id } });
+    if (!restaurant) throw new NotFoundException('Restaurant not found');
     await this.restaurantRepo.remove(restaurant);
   }
 
   async findAllSortedByRating(order: 'ASC' | 'DESC' = 'DESC') {
-  return this.restaurantRepo.find({
-    order: { averageRating: order },
-    relations: ['meals', 'owner'],
-  });
-}
+    const restaurants = await this.restaurantRepo.find({
+      order: { averageRating: order },
+      relations: ['meals', 'owner', 'category'],
+      select: {
+        id: true,
+        name: true,
+        location: true,
+        Identity: true,
+        logo_url: true,
+        category: { id: true },
+        averageRating: true,
+        createdAt: true,
+        updatedAt: true,
+        owner: {
+          id: true,
+          userType: true,
+          firstName: true,
+          lastName: true,
+          email: true, // ✅ أضفناها
+        },
+      },
+    });
 
+    return restaurants.map((r) => ({
+      ...r,
+      owner: this.mapOwner(r.owner),
+    }));
+  }
 }
