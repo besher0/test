@@ -72,7 +72,7 @@ const user = await this.findOne(id);
     throw new HttpException('User not found', HttpStatus.NOT_FOUND);
   }
   if (updateUserDto.password && updateUserDto.password !== updateUserDto.confirmPassword) {
-    throw new HttpException('Passwords do not match', HttpStatus.BAD_REQUEST);
+    throw new HttpException('Passwords do not match', HttpStatus.BAD_REQUEST);}
 
     const hashedPassword = updateUserDto.password ? await bcrypt.hash(updateUserDto.password, 10) : undefined;
     await this.userRepository.update(id, {
@@ -81,9 +81,9 @@ const user = await this.findOne(id);
     });
     return this.findOne(id);
   }
-  }
+  
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
 
     await this.userRepository.delete(id);
   }
