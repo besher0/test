@@ -25,7 +25,7 @@
     "migration:revert":"npm run typeorm --migration:revert"
   },
   "dependencies": {
-    "@golevelup/nestjs-trime": "^0.9.3",
+    "@golevelup/nestjs-stripe": "^0.9.3",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -51,7 +51,7 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "sqlite3": "^5.1.7",
-    "trime": "^18.5.0",
+    "stripe": "^18.5.0",
     "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.26"
   },
@@ -66,7 +66,7 @@
     "@types/multer": "^2.0.0",
     "@types/node": "^22.18.0",
     "@types/passport-jwt": "^4.0.1",
-    "@types/trime": "^8.0.416",
+    "@types/stripe": "^8.0.416",
     "@types/supertest": "^6.0.2",
     "cross-env": "^10.0.0",
     "eslint": "^9.18.0",
