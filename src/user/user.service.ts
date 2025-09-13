@@ -9,15 +9,18 @@ import { User } from '../user/user.entity';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { UpdateUserDto } from '../user/dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt/dist/jwt.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+        private jwtService: JwtService,
+    
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto): Promise<{ user: User; accessToken: string }> {
     if (createUserDto.password !== createUserDto.confirmPassword) {
       throw new Error('Passwords do not match');
     }
@@ -37,20 +40,22 @@ export class UserService {
       ...createUserDto,
       password: hashedPassword,
       userType: createUserDto.userType || 'normalUser',
+      
     });
 
     const savedUser = await this.userRepository.save(user);
 
 if (savedUser.userType === 'normalUser' && createUserDto.favoriteFood) {
-      // const preference: CreateUserPreferencesDto = {
-      //   user: savedUser,
-      //   preference_type: 'favorite_food',
-      //   preference_value: createUserDto.favoriteFood,
-      // };
-      // await this.preferencesService.create(preference);
       savedUser.favoriteFood=createUserDto.favoriteFood
     }
-    return savedUser;
+  const payload = { sub: savedUser.id, email: savedUser.email, role: savedUser.userType };
+  const accessToken = await this.jwtService.signAsync(payload);
+
+  return {
+    user: savedUser,
+    accessToken:accessToken,
+  };
+
   }
 
 async findAll(): Promise<User[]> {
