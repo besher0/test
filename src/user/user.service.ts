@@ -30,7 +30,7 @@ export class UserService {
   }
 
   // تحقق يدوي من قيمة favoriteFood إذا كانت موجودة
-  const validFoods = ['meat', 'rice', 'drink', 'dessert', 'burger', 'pastry'];
+  const validFoods = ['لحمة', 'رز', 'مشروبات', 'حلويات', 'برغر', 'معكرونة'];
   if (createUserDto.favoriteFood && !validFoods.includes(createUserDto.favoriteFood)) {
     throw new HttpException('Favorite food must be one of the listed options', HttpStatus.BAD_REQUEST);
   }

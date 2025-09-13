@@ -62,12 +62,12 @@ export class CreateUserDto {
 
   @ApiProperty({ 
     description: 'Favorite food',
-    example: 'burger'  // أضفت مثال
+    example: 'برغر'  // أضفت مثال
   })
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   @ValidateIf(o => o.userType === 'normalUser')
   @IsNotEmpty({ message: 'Favorite food is required' })
-  @IsEnum(['meat', 'rice', 'drink', 'dessert', 'burger', 'pastry'], { message: 'Favorite food must be one of the listed options' })
+  @IsEnum(['لحمة', 'رز', 'مشروبات', 'حلويات', 'برغر', 'معكرونة'], { message: 'Favorite food must be one of the listed options' })
   favoriteFood?: string;
 
   @ApiProperty({ 

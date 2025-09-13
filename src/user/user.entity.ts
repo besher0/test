@@ -29,11 +29,11 @@ export class User {
   @Column({ type: 'date' })
   birthDate: Date;
 
-  @ApiProperty({ enum: ['meat', 'rice', 'drink', 'dessert', 'burger', 'pastry'], description: 'Favorite food', required: false })
+  @ApiProperty({ enum: ['لحمة', 'رز', 'مشروبات', 'حلويات', 'برغر', 'معكرونة'], description: 'Favorite food', required: false })
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   @ValidateIf(o => o.userType === 'normalUser')
-  @IsEnum(['meat', 'rice', 'drink', 'dessert', 'burger', 'pastry'], { message: 'Favorite food must be one of the listed options' })
-  @ApiProperty({ example: "meat" })
+  @IsEnum(['لحمة', 'رز', 'مشروبات', 'حلويات', 'برغر', 'معكرونة'], { message: 'Favorite food must be one of the listed options' })
+  @ApiProperty({ example: "لحمة" })
   @Column({ nullable: true })
   favoriteFood: string;
 

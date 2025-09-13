@@ -67,7 +67,7 @@ export class CategoryService {
 
       async getFavoriteFoodCategories() {
     // قائمة الأصناف الستة المحددة للأكل المفضل
-    const foodCategories = ['meat', 'rice', 'drink', 'dessert', 'burger', 'pastry'];
+    const foodCategories = ['لحمة', 'رز', 'مشروبات', 'حلويات', 'برغر', 'معكرونة'];
 
     // جلب الأصناف من قاعدة البيانات مع روابط الصور إن وجدت
     const categories = await this.categoryRepository.find({
@@ -90,7 +90,7 @@ export class CategoryService {
 
   async uploadFoodCategoryImage(name: string, file: Express.Multer.File): Promise<{ message: string; imageUrl: string }> {
     // قائمة الأصناف المسموح بها
-    const allowedCategories = ['meat', 'rice', 'drink', 'dessert', 'burger', 'pastry'];
+    const allowedCategories = ['لحمة', 'رز', 'مشروبات', 'حلويات', 'برغر', 'معكرونة'];
     if (!allowedCategories.includes(name)) {
       throw new BadRequestException(`Category ${name} is not a valid favorite food category`);
     }
