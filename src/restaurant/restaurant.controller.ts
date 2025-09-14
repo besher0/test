@@ -1,14 +1,15 @@
 /* eslint-disable prettier/prettier */
-import { Controller, Get, Post, Body, Param,  Delete, Put, UseGuards,  } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param,  Delete, Put, UseGuards, UploadedFile, UseInterceptors,  } from '@nestjs/common';
 import { RestaurantService } from './restaurant.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiNotFoundResponse, ApiBadRequestResponse, ApiOkResponse, ApiBearerAuth,  } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiNotFoundResponse,ApiConsumes, ApiOkResponse, ApiBearerAuth,  } from '@nestjs/swagger';
 import { Restaurant } from './restaurant.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
 import { RestaurantGuard } from 'src/auth/guards/restaurant.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 
 @ApiTags('Restaurants')
@@ -18,63 +19,36 @@ export class RestaurantController {
     private readonly restaurantService: RestaurantService,
     
   ) {}
-
+//eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjNkODhkNWQxLTY0ZmMtNDkzMy1hYzY2LTU1MTEwZjJjNzNmNSIsImVtYWlsIjoiam9obi5kb2VAZWNjeGFtcGxlLmNvbSIsInVzZXJUeXBlIjoicmVzdGF1cmFudCIsImlhdCI6MTc1Nzg1NTA1MSwiZXhwIjoxNzU3ODk4MjUxfQ.4lP0X4Kz-fynxF0QdJsYz8-DDsIJR0Kks620GroZq7w"
   @Post()
-@UseGuards(JwtAuthGuard, RestaurantGuard)  @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RestaurantGuard)
+@ApiBearerAuth()
 @ApiOperation({ summary: 'Create a new restaurant' })
-  @ApiBody({ 
-    type: CreateRestaurantDto,  // يستخدم examples من الـ DTO
-    description: 'Restaurant creation data'
-  })
-  @ApiOkResponse({ 
-    type: Restaurant,  // يولد examples تلقائيًا من الـ Entity
-    description: 'Restaurant created successfully'
-  })
-@ApiResponse({ 
-    status: 201, 
-    description: 'Created',
-    schema: { 
-      example: {
-        id: 'cb20978d-f263-458d-9ef5-23eaba15d62e',
-        name: 'Italiano Pizza',
-        location: '123 Main Street, New York',
-        Identity: 'RESTAURANT-12345',
-        logo_url: 'https://example.com/logo.png',
-        owner: {
-          id: '11111111-1111-4111-8111-111111111111',
-          userType: 'restaurant',
-          name: 'John Doe' // مثال للاسم
-        },
-        // categoryId: '22222222-2222-4222-8222-222222222222',
-        averageRating: 4.7,
-        createdAt: '2025-09-13T10:00:00.000Z',
-        updatedAt: '2025-09-13T10:00:00.000Z'
-      } 
-    }
-  })
-  @ApiBadRequestResponse({ 
-    description: 'Bad Request if validation fails',
-    schema: {
-      example: {
-        statusCode: 400,
-        message: ['Name is required'],
-        error: 'Bad Request'
-      }
-    }
-  })
-  @ApiNotFoundResponse({ 
-    description: 'Owner or Category not found',
-    schema: {
-      example: {
-        statusCode: 404,
-        message: 'Owner not found',
-        error: 'Not Found'
-      }
-    }
-  })
+@ApiConsumes('multipart/form-data') // 👈 مهم جداً
+@UseInterceptors(FileInterceptor('file')) 
+  @ApiBody({
+  schema: {
+    type: 'object',
+    properties: {
+      name: { type: 'string', example: 'Italiano Pizza' },
+      location: { type: 'string', example: '123 Main Street, New York' },
+      Identity: { type: 'string', example: 'RESTAURANT-12345' },
+      file: {
+        type: 'string',
+        format: 'binary', // 👈 هذا اللي يخلي Swagger يطلع زر Choose File
+      },
+    },
+    required: ['name', 'location'],
+  },
+})
+@ApiOkResponse({
+  type: Restaurant,
+  description: 'Restaurant created successfully',
+})
   create(@Body() dto: CreateRestaurantDto,
+  @UploadedFile() file: Express.Multer.File,
    @CurrentUser() currentUser: User) {
-    return this.restaurantService.create(dto,currentUser);
+    return this.restaurantService.create(dto,currentUser,file);
   }
 
   @Get()
@@ -175,8 +149,10 @@ export class RestaurantController {
       }
     }
   })
-  update(@Param('id') id: string, @Body() dto: UpdateRestaurantDto) {
-    return this.restaurantService.update(id, dto);
+  update(@Param('id') id: string,
+      @UploadedFile() file: Express.Multer.File,
+   @Body() dto: UpdateRestaurantDto) {
+    return this.restaurantService.update(id, dto,file);
   }
 
   @Delete(':id')

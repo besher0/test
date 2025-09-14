@@ -9,6 +9,7 @@ import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { Category } from 'src/category/category.entity';
 import { User } from 'src/user/user.entity';
 import { Country } from 'src/country/county.entity';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class MealService {
@@ -23,7 +24,7 @@ export class MealService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Country)
 private countryRepo: Repository<Country>,
-
+    private cloudinaryService: CloudinaryService,
   ) {}
 
 async getMealsByUserPreference(userId: string): Promise<Meal[]> {
@@ -57,7 +58,7 @@ if (!user.favoriteFood) {
   return meals;
   }
 
-  async create(dto: CreateMealDto): Promise<Meal> {
+  async create(dto: CreateMealDto, file?: Express.Multer.File): Promise<Meal> {
     const restaurant = await this.restaurantRepo.findOne({ where: { id: dto.restaurantId } });
     if (!restaurant) throw new NotFoundException('Restaurant not found');
 
@@ -71,11 +72,17 @@ if (!user.favoriteFood) {
     const foundCountry = await this.countryRepo.findOne({ where: { id: dto.countryId } });
     country = foundCountry ?? undefined;
   }
+     let image_url: string | undefined;
+    if (file) {
+      const result = await this.cloudinaryService.uploadImage(file, `meals/${dto.name}`);
+      image_url = result.secure_url;
+    }
     const meal = this.mealRepo.create({
       ...dto,
       restaurant,
       category,
-      country
+      country,
+      image_url
     });
 
     return this.mealRepo.save(meal);
@@ -96,7 +103,7 @@ if (!user.favoriteFood) {
     return meal;
   }
 
-  async update(id: string, dto: UpdateMealDto): Promise<Meal> {
+  async update(id: string, dto: UpdateMealDto, file?: Express.Multer.File): Promise<Meal> {
     const meal = await this.findOne(id);
 
     if (dto.categoryId) {
@@ -105,6 +112,11 @@ if (!user.favoriteFood) {
     }
 
     Object.assign(meal, dto);
+
+        if (file) {
+      const result = await this.cloudinaryService.uploadImage(file, `meals/${meal.name}`);
+      meal.image_url = result.secure_url;
+    }
     return this.mealRepo.save(meal);
   }
 

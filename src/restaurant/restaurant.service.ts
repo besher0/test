@@ -7,6 +7,7 @@ import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import { User } from 'src/user/user.entity';
 import { Category } from 'src/category/category.entity';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 // واجهة Response مخصصة
 export interface RestaurantResponse extends Omit<Restaurant, 'owner'> {
@@ -28,6 +29,7 @@ export class RestaurantService {
     private userRepo: Repository<User>,
     @InjectRepository(Category)
     private categoryRepo: Repository<Category>,
+       private readonly cloudinaryService: CloudinaryService, 
   ) {}
 
   private mapOwner(user: User) {
@@ -42,25 +44,31 @@ console.log(user)
     };
   }
 
-  async create(dto: CreateRestaurantDto, currentUser: User) {
+  async create(dto: CreateRestaurantDto, currentUser: User ,file?: Express.Multer.File,) {
     console.log(currentUser)
 
     if (currentUser.userType !== 'restaurant') {
       throw new NotFoundException('Only restaurant owners can create restaurants');
     }
 
-    // let category: Category | null = null;
-    // if (dto.categoryId) {
-    //   category = await this.categoryRepo.findOne({ where: { id: dto.categoryId } });
-    //   if (!category) throw new NotFoundException('Category not found');
-    // }
+    let category: Category | null = null;
+    if (dto.categoryId) {
+      category = await this.categoryRepo.findOne({ where: { id: dto.categoryId } });
+      if (!category) throw new NotFoundException('Category not found');
+    }
       const owner = await this.userRepo.findOne({ where: { id: currentUser.id } });
       console.log('[Service.create] owner from DB =', owner && { id: owner.id, userType: owner.userType });
 
   if (!owner) throw new NotFoundException('Owner not found');
+   let logo_url: string | undefined;
+  if (file) {
+    const result = await this.cloudinaryService.uploadImage(file, `restaurants/${dto.name}`);
+    logo_url = result.secure_url;
+  }
     const restaurant = this.restaurantRepo.create({
       ...dto,
       owner,
+      logo_url
     });
 
     const saved = await this.restaurantRepo.save(restaurant);
@@ -112,7 +120,7 @@ console.log(user)
   };
   }
 
-  async update(id: string, dto: UpdateRestaurantDto){
+  async update(id: string, dto: UpdateRestaurantDto, file?: Express.Multer.File){
     const restaurant = await this.restaurantRepo.findOne({
       where: { id },
       relations: ['owner', 'category'],
@@ -124,6 +132,10 @@ console.log(user)
       const category = await this.categoryRepo.findOne({ where: { id: dto.categoryId } });
       restaurant.category = category ?? null;
     }
+      if (file) {
+    const result = await this.cloudinaryService.uploadImage(file, `restaurants/${restaurant.id}`);
+    restaurant.logo_url = result.secure_url;
+  }
 
     Object.assign(restaurant, dto);
     const updated = await this.restaurantRepo.save(restaurant);

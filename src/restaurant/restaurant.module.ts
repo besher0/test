@@ -6,9 +6,10 @@ import { RestaurantService } from './restaurant.service';
 import { RestaurantController } from './restaurant.controller';
 import { User } from 'src/user/user.entity';
 import { Category } from 'src/category/category.entity';
+import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Restaurant, User, Category])],
+  imports: [TypeOrmModule.forFeature([Restaurant, User, Category]),CloudinaryModule],
   providers: [RestaurantService],
   controllers: [RestaurantController],
   exports: [RestaurantService],

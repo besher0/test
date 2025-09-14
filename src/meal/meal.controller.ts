@@ -1,11 +1,12 @@
 /* eslint-disable prettier/prettier */
-import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { MealService } from './meal.service';
 import { CreateMealDto } from './dto/create-meal.dto';
 import { UpdateMealDto } from './dto/update-meal.dto';
 import { Meal } from './meal.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('meals')
 export class MealController {
@@ -20,12 +21,39 @@ export class MealController {
     return this.mealService.getMealsByUserPreference(req.user);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post()
-  @ApiOperation({ summary: 'Post ()'.trim() })
-  @ApiResponse({ status: 200, description: 'Success' })
-  create(@Body() dto: CreateMealDto) {
-    return this.mealService.create(dto);
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+    //@ApiBody({ type: CreateMealDto })
+  @ApiOperation({ summary: 'Create meal with optional image' })
+  @ApiResponse({ status: 201, description: 'Meal created' })
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        description: { type: 'string' },
+        restaurantId: { type: 'string' },
+        categoryId: { type: 'string' },
+        price:{type:'number'},
+        preparationTime:{type:'string'},
+        countryId: { type: 'string' },
+        image: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async create(
+    @Body() dto: CreateMealDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.mealService.create(dto, file);
   }
+
 
   @Get()
   @ApiOperation({ summary: 'Get ()'.trim() })
@@ -41,11 +69,38 @@ export class MealController {
     return this.mealService.findOne(id);
   }
 
+
+  @UseGuards(JwtAuthGuard)
   @Put(':id')
-  @ApiOperation({ summary: "Put (':id')".trim() })
-  @ApiResponse({ status: 200, description: 'Success' })
-  update(@Param('id') id: string, @Body() dto: UpdateMealDto) {
-    return this.mealService.update(id, dto);
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Update meal with optional image' })
+  @ApiResponse({ status: 200, description: 'Meal updated' })
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        description: { type: 'string' },
+        restaurantId: { type: 'string' },
+        categoryId: { type: 'string' },
+        price:{type:'number'},
+        preparationTime:{type:'string'},
+        countryId: { type: 'string' },
+        image: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateMealDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ): Promise<Meal> {
+    return this.mealService.update(id, dto, file);
   }
 
   @Delete(':id')
