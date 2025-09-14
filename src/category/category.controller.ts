@@ -27,7 +27,6 @@ export class CategoryController {
   @Get('food-categories')
   // @UseGuards(JwtAuthGuard, RolesGuard)
   // @Roles('normalUser')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get available favorite food categories with images' })
   @ApiResponse({ status: 200, description: 'List of favorite food categories', type: [FoodCategoryDto] })
   async getFoodCategories() {
@@ -44,8 +43,7 @@ export class CategoryController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+
   @ApiOperation({ summary: 'Get all categories' })
   @ApiResponse({ status: 200, description: 'List of categories' })
   findAll() {
@@ -105,7 +103,6 @@ export class CategoryController {
     @Param('name') name: string,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<{ message: string; imageUrl: string }> {
-    // التأكد من أن الصنف من ضمن الأصناف المسموح بها
     return await this.categoryService.uploadFoodCategoryImage(name, file);
   }
 }

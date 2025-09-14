@@ -1,8 +1,8 @@
 /* eslint-disable prettier/prettier */
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne, JoinColumn, ManyToOne,  } from 'typeorm';
 import { Category } from '../category/category.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, ValidateIf } from 'class-validator';
+import {  ValidateIf } from 'class-validator';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { Cart } from 'src/cart/cart.entity';
 import { Order } from 'src/order/order.entity';
@@ -29,13 +29,11 @@ export class User {
   @Column({ type: 'date' })
   birthDate: Date;
 
-  @ApiProperty({ enum: ['لحمة', 'رز', 'مشروبات', 'حلويات', 'برغر', 'معكرونة'], description: 'Favorite food', required: false })
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  @ValidateIf(o => o.userType === 'normalUser')
-  @IsEnum(['لحمة', 'رز', 'مشروبات', 'حلويات', 'برغر', 'معكرونة'], { message: 'Favorite food must be one of the listed options' })
-  @ApiProperty({ example: "لحمة" })
-  @Column({ nullable: true })
-  favoriteFood: string;
+  @ValidateIf((o) => o.userType === 'normalUser')
+  @ManyToOne(() => Category, category => category.user, { nullable: true, eager: true })
+  @JoinColumn({ name: 'favoriteFood' })
+  favoriteFood: Category;
 
   @ApiProperty({ example: "normalUser" })
   @Column({
@@ -64,9 +62,9 @@ export class User {
   @Column({ nullable: true })
   profile_picture: string;
 
-  @ApiProperty()
-  @OneToMany(() => Category, category => category.user, { onDelete: 'CASCADE' })
-  categories: Category[];
+  // @ApiProperty()
+  // @OneToMany(() => Category, category => category.user, { eager: true, nullable: true })
+  // categories: Category[];
 
   @ApiProperty()
   @OneToMany(() => Restaurant, (restaurant) => restaurant.owner)

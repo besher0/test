@@ -6,7 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
-import { User } from '../user/user.entity';
+// import { User } from '../user/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -17,11 +17,11 @@ export class AuthService {
   ) {}
 
   async login(email: string, password: string) {
-    const user = await this.userService.findOneByEmail(email);
+    const user = await this.userService.findByEmail(email);
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    const payload = { id: user.id, userType: user.userType };
+    const payload = { id: user.id, email: user.email, userType: user.userType };
     return {
       access_token: this.jwtService.sign(payload),
     user: user,

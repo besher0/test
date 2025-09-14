@@ -8,6 +8,7 @@ import { UpdateMealDto } from './dto/update-meal.dto';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { Category } from 'src/category/category.entity';
 import { User } from 'src/user/user.entity';
+import { Country } from 'src/country/county.entity';
 
 @Injectable()
 export class MealService {
@@ -20,6 +21,9 @@ export class MealService {
     private categoryRepo: Repository<Category>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Country)
+private countryRepo: Repository<Country>,
+
   ) {}
 
 async getMealsByUserPreference(userId: string): Promise<Meal[]> {
@@ -62,10 +66,16 @@ if (!user.favoriteFood) {
     const foundCategory = await this.categoryRepo.findOne({ where: { id: dto.categoryId } });
     category = foundCategory ?? undefined;     }
 
+ let country: Country | undefined;
+  if (dto.countryId) {
+    const foundCountry = await this.countryRepo.findOne({ where: { id: dto.countryId } });
+    country = foundCountry ?? undefined;
+  }
     const meal = this.mealRepo.create({
       ...dto,
       restaurant,
       category,
+      country
     });
 
     return this.mealRepo.save(meal);

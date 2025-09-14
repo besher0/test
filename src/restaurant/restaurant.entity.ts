@@ -85,7 +85,7 @@ export class Restaurant {
   @ApiProperty({ 
     example: 4.7 
   })
-  @Column({ type: 'float', default: 0 })
+  @Column({ type: 'float', default: 0 , nullable: true})
   averageRating: number;
 
   @ApiProperty({ 

@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany,  } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany,  } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { Meal } from 'src/meal/meal.entity';
@@ -22,7 +22,7 @@ export class Category {
   @Column({ name: 'image_url', nullable: true })
   image_url: string;
 
-  @ManyToOne(() => User, user => user.categories)
+  @OneToMany(() => User, user => user.favoriteFood)
   user: User;
 
   @OneToMany(() => Restaurant, (restaurant) => restaurant.category)

@@ -8,9 +8,10 @@ import { AuthModule } from 'src/auth/auth.module';
 import { Cart } from 'src/cart/cart.entity';
 import { Order } from 'src/order/order.entity';
 import { JwtModule } from '@nestjs/jwt';
+import { Category } from 'src/category/category.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User,Cart,Order]),forwardRef(() => AuthModule),    JwtModule.register({
+  imports: [TypeOrmModule.forFeature([User,Cart,Order,Category]),forwardRef(() => AuthModule),    JwtModule.register({
         secret: process.env.JWT_SECRET || 'your_jwt_secret',
         signOptions: { expiresIn: '12h' },
       }),],

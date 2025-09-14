@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, MinLength, IsEnum, IsEmail, IsDate, Matches, IsNotEmpty, IsOptional, IsUrl, ValidateIf } from 'class-validator';
+import { IsString, MinLength, IsEnum, IsEmail, IsDate, Matches, IsNotEmpty, IsOptional, IsUrl, ValidateIf, IsUUID } from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty({ 
@@ -65,10 +65,10 @@ export class CreateUserDto {
     example: 'برغر'  // أضفت مثال
   })
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  @ValidateIf(o => o.userType === 'normalUser')
-  @IsNotEmpty({ message: 'Favorite food is required' })
-  @IsEnum(['لحمة', 'رز', 'مشروبات', 'حلويات', 'برغر', 'معكرونة'], { message: 'Favorite food must be one of the listed options' })
-  favoriteFood?: string;
+  @ValidateIf((o) => o.userType === 'normalUser')
+  @IsUUID('all', { message: 'Favorite food must be a valid category ID' })
+  @IsOptional()
+  favoriteFood?: string; 
 
   @ApiProperty({ 
     enum: ['normalUser', 'admin', 'restaurant', 'store'], 

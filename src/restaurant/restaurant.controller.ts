@@ -1,9 +1,9 @@
 /* eslint-disable prettier/prettier */
-import { Controller, Get, Post, Body, Param,  Delete, Query, Put, UseGuards,  } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param,  Delete, Put, UseGuards,  } from '@nestjs/common';
 import { RestaurantService } from './restaurant.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiNotFoundResponse, ApiBadRequestResponse, ApiOkResponse, ApiQuery, ApiBearerAuth,  } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiNotFoundResponse, ApiBadRequestResponse, ApiOkResponse, ApiBearerAuth,  } from '@nestjs/swagger';
 import { Restaurant } from './restaurant.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
@@ -74,7 +74,6 @@ export class RestaurantController {
   })
   create(@Body() dto: CreateRestaurantDto,
    @CurrentUser() currentUser: User) {
-  console.log('[Controller.create] currentUser =', currentUser);
     return this.restaurantService.create(dto,currentUser);
   }
 
@@ -218,39 +217,39 @@ export class RestaurantController {
     return this.restaurantService.remove(id);
   }
 
-  @Get('sorted/by-rating')
-  @ApiOperation({ summary: 'Get restaurants sorted by rating' })
-  @ApiQuery({ 
-    name: 'order', 
-    enum: ['ASC', 'DESC'], 
-    required: false, 
-    description: 'Sort order (default: DESC)' 
-  })
-  @ApiOkResponse({ 
-    type: [Restaurant],
-    description: 'Restaurants sorted by rating'
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Success',
-    schema: { 
-      example: [
-        {
-          id: '33333333-3333-4333-8333-333333333333',
-          name: 'Italiano Pizza',
-          location: '123 Main Street, New York',
-          ownerId: '11111111-1111-4111-8111-111111111111',
-          categoryId: '22222222-2222-4222-8222-222222222222',
-          averageRating: 4.7,
-          createdAt: '2025-09-13T10:00:00.000Z',
-          updatedAt: '2025-09-13T10:00:00.000Z'
-        }
-      ] 
-    }
-  })
-  async getRestaurantsByRating(
-  @Query('order') order: 'ASC' | 'DESC' = 'DESC',) {
-    return this.restaurantService.findAllSortedByRating(order);
-  } 
+  // @Get('sorted/by-rating')
+  // @ApiOperation({ summary: 'Get restaurants sorted by rating' })
+  // @ApiQuery({ 
+  //   name: 'order', 
+  //   enum: ['ASC', 'DESC'], 
+  //   required: false, 
+  //   description: 'Sort order (default: DESC)' 
+  // })
+  // @ApiOkResponse({ 
+  //   type: [Restaurant],
+  //   description: 'Restaurants sorted by rating'
+  // })
+  // @ApiResponse({ 
+  //   status: 200, 
+  //   description: 'Success',
+  //   schema: { 
+  //     example: [
+  //       {
+  //         id: '33333333-3333-4333-8333-333333333333',
+  //         name: 'Italiano Pizza',
+  //         location: '123 Main Street, New York',
+  //         ownerId: '11111111-1111-4111-8111-111111111111',
+  //         categoryId: '22222222-2222-4222-8222-222222222222',
+  //         averageRating: 4.7,
+  //         createdAt: '2025-09-13T10:00:00.000Z',
+  //         updatedAt: '2025-09-13T10:00:00.000Z'
+  //       }
+  //     ] 
+  //   }
+  // })
+  // async getRestaurantsByRating(
+  // @Query('order') order: 'ASC' | 'DESC' = 'DESC',) {
+  //   return this.restaurantService.findAllSortedByRating(order);
+  // } 
 
 }

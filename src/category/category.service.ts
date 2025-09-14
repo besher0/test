@@ -72,7 +72,7 @@ export class CategoryService {
     // جلب الأصناف من قاعدة البيانات مع روابط الصور إن وجدت
     const categories = await this.categoryRepository.find({
       where: { name: In(foodCategories) },
-      select: ['name', 'image_url'],
+      select: ['name', 'image_url',],
     });
 
     // تحويل الأصناف إلى صيغة الاستجابة مع إضافة الصور
@@ -81,6 +81,7 @@ export class CategoryService {
       const dbCategory = categories.find(c => c.name === category);
       return {
         name: category,
+        id:dbCategory?.id,
         imageUrl: dbCategory?.image_url || undefined,
       };
     }),

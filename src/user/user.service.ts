@@ -1,95 +1,136 @@
 /* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../user/user.entity';
-import { CreateUserDto } from '../user/dto/create-user.dto';
-import { UpdateUserDto } from '../user/dto/update-user.dto';
+import { User } from './user.entity';
+import { Category } from '../category/category.entity';
+import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
-import { JwtService } from '@nestjs/jwt/dist/jwt.service';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
-        private jwtService: JwtService,
-    
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
+    @InjectRepository(Category) private readonly categoryRepository: Repository<Category>,
+    private readonly jwtService: JwtService,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<{ user: User; accessToken: string }> {
+  // تسجيل مستخدم جديد
+  async create(
+    createUserDto: CreateUserDto,
+  ){
+    // تحقق من تطابق الباسورد
     if (createUserDto.password !== createUserDto.confirmPassword) {
-      throw new Error('Passwords do not match');
+      throw new HttpException('Passwords do not match', HttpStatus.BAD_REQUEST);
     }
-    const userType = createUserDto.userType || 'normalUser';
-  if (userType === 'normalUser' && !createUserDto.favoriteFood) {
-    throw new HttpException('Favorite food is required for normal users', HttpStatus.BAD_REQUEST);
-  }
 
-  // تحقق يدوي من قيمة favoriteFood إذا كانت موجودة
-  const validFoods = ['لحمة', 'رز', 'مشروبات', 'حلويات', 'برغر', 'معكرونة'];
-  if (createUserDto.favoriteFood && !validFoods.includes(createUserDto.favoriteFood)) {
-    throw new HttpException('Favorite food must be one of the listed options', HttpStatus.BAD_REQUEST);
-  }
+    // تحقق من الأكلة المفضلة إذا كانت موجودة
+    let favoriteCategory: Category | null = null;
+    if (createUserDto.favoriteFood) {
+      favoriteCategory = await this.categoryRepository.findOne({
+        where: { id: createUserDto.favoriteFood },
+      });
 
+      if (!favoriteCategory) {
+        throw new HttpException(
+          'Favorite food category not found',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+
+    // تشفير كلمة المرور
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+
+    // إنشاء مستخدم
     const user = this.userRepository.create({
-      ...createUserDto,
+      firstName: createUserDto.firstName,
+      lastName: createUserDto.lastName,
+      birthDate: createUserDto.birthDate,
+      gender: createUserDto.gender,
+      email: createUserDto.email,
       password: hashedPassword,
+      profile_picture: createUserDto.profile_picture,
       userType: createUserDto.userType || 'normalUser',
-      
+      favoriteFood: favoriteCategory ?? undefined,
     });
+console.log('DTO userType:', createUserDto.userType);
 
     const savedUser = await this.userRepository.save(user);
+console.log('Saved userType:', savedUser.userType);
 
-if (savedUser.userType === 'normalUser' && createUserDto.favoriteFood) {
-      savedUser.favoriteFood=createUserDto.favoriteFood
-    }
-  const payload = { id: savedUser.id, email: savedUser.email, userType: savedUser.userType };
-  const accessToken = await this.jwtService.signAsync(payload);
+    // إنشاء توكن JWT
+    const payload = { id: savedUser.id, email: savedUser.email, userType: savedUser.userType };
+    const accessToken = this.jwtService.sign(payload);
 
-  return {
-    user: savedUser,
-    accessToken:accessToken,
-  };
-
+    return { user: savedUser, accessToken };
   }
 
-async findAll(): Promise<User[]> {
-  return this.userRepository.find(); 
+  // إحضار مستخدم حسب ID
+  async findById(id: string): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: ['favoriteFood'],
+    });
+
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    return user;
+  }
+
+  async findAll(): Promise<User[]> {
+  return this.userRepository.find({
+    relations: ['favoriteFood'], // إذا بدك تجيب الأكلة المفضلة كمان
+  });
 }
 
-  async findOne(id: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { id: id } });
+  // إحضار مستخدم حسب Email
+  async findByEmail(email: string) {
+    return await this.userRepository.findOne({ where: { email } });
   }
 
-  async findOneByEmail(email: string): Promise<User> {
-    return this.userRepository.findOneOrFail({ where: { email } });
+  // تحديث بيانات مستخدم
+  async update(id: string, updateData: Partial<CreateUserDto>): Promise<User> {
+    const user = await this.findById(id);
+
+    if (updateData.password && updateData.confirmPassword) {
+      if (updateData.password !== updateData.confirmPassword) {
+        throw new HttpException('Passwords do not match', HttpStatus.BAD_REQUEST);
+      }
+      user.password = await bcrypt.hash(updateData.password, 10);
+    }
+
+    if (updateData.favoriteFood) {
+      const favoriteCategory = await this.categoryRepository.findOne({
+        where: { id: updateData.favoriteFood },
+      });
+
+      if (!favoriteCategory) {
+        throw new HttpException(
+          'Favorite food category not found',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      user.favoriteFood = favoriteCategory;
+    }
+
+    Object.assign(user, updateData);
+
+    return await this.userRepository.save(user);
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
-    
-const user = await this.findOne(id);
-  if (!user) {
-    throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-  }
-  if (updateUserDto.password && updateUserDto.password !== updateUserDto.confirmPassword) {
-    throw new HttpException('Passwords do not match', HttpStatus.BAD_REQUEST);}
-
-    const hashedPassword = updateUserDto.password ? await bcrypt.hash(updateUserDto.password, 10) : undefined;
-    await this.userRepository.update(id, {
-      ...updateUserDto,
-      password: hashedPassword,
-    });
-    return this.findOne(id);
-  }
-  
-
+  // حذف مستخدم
   async remove(id: string): Promise<void> {
-
-    await this.userRepository.delete(id);
+    const result = await this.userRepository.delete(id);
+    if (result.affected === 0) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
   }
 }

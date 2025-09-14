@@ -10,7 +10,7 @@ import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
   imports: [TypeOrmModule.forFeature([Category, ]),CloudinaryModule],
   controllers: [CategoryController],
   providers: [CategoryService],
-    exports: [CategoryService,],
+    exports: [CategoryService,TypeOrmModule],
 
 })
 export class CategoryModule {}

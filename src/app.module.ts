@@ -18,6 +18,8 @@ import { ReactionModule } from './reaction/reaction.module';
 import { PostModule } from './post/post.module';
 import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
+import { CountryModule } from './country/country.module';
+import { HomeModule } from './home-page/home.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -34,7 +36,9 @@ import { OrderModule } from './order/order.module';
     OrderModule,
     RatingModule,
     ReactionModule,
-    PostModule
+    PostModule,
+    CountryModule,
+    HomeModule
   ],
 controllers:[AppController],
 providers:[AppService]
