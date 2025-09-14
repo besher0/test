@@ -14,6 +14,8 @@ import { Category } from 'src/category/category.entity';
 import { Meal } from 'src/meal/meal.entity';
 import { Rating } from 'src/rating/rating.entity';
 import { ApiProperty } from '@nestjs/swagger';
+import { Follow } from 'src/follow/follow.entity';
+import { Like } from 'src/like/like.entity';
 
 @Entity()
 export class Restaurant {
@@ -87,6 +89,12 @@ export class Restaurant {
   })
   @Column({ type: 'float', default: 0 , nullable: true})
   averageRating: number;
+
+  @OneToMany(() => Follow, (follow) => follow.restaurant)
+  follows: Follow[];
+
+    @OneToMany(() => Like, (like) => like.restaurant)
+  likes: Like[];
 
   @ApiProperty({ 
     example: '2025-09-13T10:00:00.000Z' 

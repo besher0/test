@@ -20,6 +20,8 @@ import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
 import { CountryModule } from './country/country.module';
 import { HomeModule } from './home-page/home.module';
+import { FollowModule } from './follow/follow.module';
+import { LikeModule } from './like/like.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -38,7 +40,9 @@ import { HomeModule } from './home-page/home.module';
     ReactionModule,
     PostModule,
     CountryModule,
-    HomeModule
+    HomeModule,
+    FollowModule,
+    LikeModule
   ],
 controllers:[AppController],
 providers:[AppService]

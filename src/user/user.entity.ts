@@ -9,6 +9,8 @@ import { Order } from 'src/order/order.entity';
 import { Rating } from 'src/rating/rating.entity';
 import { Reaction } from 'src/reaction/reaction.entity';
 import { Post } from 'src/post/post.entity';
+import { Follow } from 'src/follow/follow.entity';
+import { Like } from 'src/like/like.entity';
 
 
 @Entity('user')
@@ -90,4 +92,10 @@ export class User {
   @ApiProperty()
   @OneToMany(() => Reaction, (reaction) => reaction.user)
   reactions: Reaction[];
+
+  @OneToMany(() => Follow, (follow) => follow.user)
+  follows: Follow[];
+
+  @OneToMany(() => Like, (like) => like.user)
+  likes: Like[];
 }

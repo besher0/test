@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { Controller, Get, Post, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, UseGuards, Req } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
@@ -63,16 +63,15 @@ export class CartController {
       }
     }
   })
-  addItem(
-    @CurrentUser() user: UserJwt,
-    @Body() body: { mealId: string; quantity?: number },
-  ) {
-    return this.cartService.addItem(
-      user.sub,
-      body.mealId,
-      body.quantity ?? 1,
-    );
-  }
+async addItem(
+  @Req() req,
+  @Param('mealId') mealId: string,
+  @Body('quantity') quantity: number,
+) {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+  const userId = req.user.id;
+  return this.cartService.addItem(userId, mealId, quantity);
+}
 
   @Delete(':itemId')
   @ApiOperation({ summary: 'Delete (":itemId")'.trim() })

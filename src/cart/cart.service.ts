@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cart } from './cart.entity';
@@ -18,46 +18,79 @@ export class CartService {
 
   async getUserCart(userId: string): Promise<Cart> {
     let cart = await this.cartRepo.findOne({
-      where: { user: { id: userId } },
-      relations: ['items', 'items.meal'],
+      where: { userId },
+      relations: ['items', 'items.meal', 'items.meal.restaurant'],
     });
 
     if (!cart) {
       const user = await this.userRepo.findOne({ where: { id: userId } });
       if (!user) throw new NotFoundException('User not found');
-      cart = this.cartRepo.create({ user, items: [] });
+      cart = this.cartRepo.create({ userId, user, items: [] });
       cart = await this.cartRepo.save(cart);
     }
     return cart;
   }
 
   async addItem(userId: string, mealId: string, quantity = 1): Promise<Cart> {
-    const cart = await this.getUserCart(userId);
-    const meal = await this.mealRepo.findOne({ where: { id: mealId } });
+    const meal = await this.mealRepo.findOne({
+      where: { id: mealId },
+      relations: ['restaurant'],
+    });
     if (!meal) throw new NotFoundException('Meal not found');
 
+    let cart = await this.cartRepo.findOne({
+      where: { userId },
+      relations: ['items', 'items.meal', 'items.meal.restaurant'],
+    });
+
+    if (!cart) {
+      const user = await this.userRepo.findOne({ where: { id: userId } });
+      if (!user) throw new NotFoundException('User not found');
+      cart = this.cartRepo.create({ userId, user, items: [] });
+      cart = await this.cartRepo.save(cart);
+    }
+
+    // ✅ تأكد أنه من نفس المطعم
+    if (cart.items.length > 0) {
+      const existingRestaurantId = cart.items[0].meal.restaurant.id;
+      if (existingRestaurantId !== meal.restaurant.id) {
+        throw new BadRequestException(
+          'You can only order from one restaurant at a time',
+        );
+      }
+    }
+
+    // ✅ تحقق إذا الأكلة موجودة
     let item = cart.items.find((i) => i.meal.id === mealId);
     if (item) {
       item.quantity += quantity;
+      await this.cartItemRepo.save(item);
     } else {
-      item = this.cartItemRepo.create({ cart, meal, quantity });
+      item = this.cartItemRepo.create({ meal, quantity, cart });
+      await this.cartItemRepo.save(item);
       cart.items.push(item);
     }
 
-    await this.cartItemRepo.save(item);
-    return this.getUserCart(userId);
+    return this.cartRepo.save(cart);
   }
 
   async removeItem(userId: string, itemId: string): Promise<Cart> {
     const cart = await this.getUserCart(userId);
-    const item = cart.items.find((i) => i.id === itemId);
-    if (!item) throw new NotFoundException('Item not found');
-    await this.cartItemRepo.remove(item);
-    return this.getUserCart(userId);
+    if (!cart) throw new NotFoundException('Cart not found');
+
+    await this.cartItemRepo.delete(itemId);
+    cart.items = cart.items.filter((item) => item.id !== itemId);
+
+    return this.cartRepo.save(cart);
   }
 
-  async clearCart(userId: string): Promise<void> {
+  async clearCart(userId: string) {
     const cart = await this.getUserCart(userId);
-    await this.cartItemRepo.remove(cart.items);
+    if (!cart) throw new NotFoundException('Cart not found');
+
+    await this.cartItemRepo.delete({ cart: { id: cart.id } });
+    cart.items = [];
+
+    return this.cartRepo.save(cart);
   }
 }

@@ -1,9 +1,10 @@
 /* eslint-disable prettier/prettier */
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { Category } from 'src/category/category.entity';
 import { Country } from 'src/country/county.entity';   // 👈 أضفنا الاستيراد
 import { ApiProperty } from '@nestjs/swagger';
+import { Like } from 'src/like/like.entity';
 
 @Entity()
 export class Meal {
@@ -40,6 +41,9 @@ export class Meal {
   @ManyToOne(() => Country, (country) => country.meals, { nullable: true, onDelete: 'SET NULL' }) // 👈 ربط البلد
   country?: Country;
 
+  @OneToMany(() => Like, (like) => like.meal)
+  likes: Like[];
+  
   @CreateDateColumn()
   createdAt: Date;
 
