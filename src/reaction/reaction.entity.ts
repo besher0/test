@@ -10,6 +10,7 @@ import {
 import { User } from 'src/user/user.entity';
 import { Post } from 'src/post/post.entity';
 import { ApiProperty } from '@nestjs/swagger';
+import { Reel } from 'src/reel/reel.entity';
 
 export enum ReactionType {
   LIKE = 'like',
@@ -37,6 +38,9 @@ export class Reaction {
 
   @ManyToOne(() => Post, (post) => post.reactions, { onDelete: 'CASCADE' })
   post: Post;
+
+  @ManyToOne(() => Reel, (reel) => reel.reactions, { nullable: true })
+  reel?: Reel;
 
   @CreateDateColumn()
   createdAt: Date;

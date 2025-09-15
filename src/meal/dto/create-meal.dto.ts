@@ -14,7 +14,7 @@ export class CreateMealDto {
   description?: string;
 
   @ApiProperty({ example: 45.5 })
-  @IsNotEmpty()
+  // @IsNotEmpty()
   @IsNumber()
   price: number;
 

@@ -1,15 +1,20 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsOptional } from 'class-validator';
 
 export class CreatePostDto {
-  @IsNotEmpty()
-  @IsString()
+  @ApiProperty({
+    example: 'This is my new post 🎉',
+    description: 'محتوى البوست (نص)',
+    type: 'string',
+  })
   content: string;
 
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+    description: 'صورة أو فيديو للمنشور',
+  })
   @IsOptional()
-  @IsString()
-  imageUrl?: string;
-
-  @IsOptional()
-  @IsString()
-  videoUrl?: string;
+  mediaUrl?: string;
 }

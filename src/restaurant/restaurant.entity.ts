@@ -16,6 +16,8 @@ import { Rating } from 'src/rating/rating.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Follow } from 'src/follow/follow.entity';
 import { Like } from 'src/like/like.entity';
+import { Post } from 'src/post/post.entity';
+import { Reel } from 'src/reel/reel.entity';
 
 @Entity()
 export class Restaurant {
@@ -95,6 +97,12 @@ export class Restaurant {
 
     @OneToMany(() => Like, (like) => like.restaurant)
   likes: Like[];
+
+  @OneToMany(() => Post, (post) => post.restaurant)
+  posts: Post[];
+
+    @OneToMany(() => Reel, (reel) => reel.restaurant)
+  reels: Reel[];
 
   @ApiProperty({ 
     example: '2025-09-13T10:00:00.000Z' 

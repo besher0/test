@@ -18,6 +18,7 @@ import { Post } from 'src/post/post.entity';
 import { Country } from 'src/country/county.entity';
 import { Follow } from 'src/follow/follow.entity';
 import { Like } from 'src/like/like.entity';
+import { Reel } from 'src/reel/reel.entity';
 
 /* eslint-disable prettier/prettier */
 config({ path: '.env' });
@@ -26,7 +27,7 @@ config({ path: '.env' });
 export const dataSourceOptions: DataSourceOptions = {
     type: 'postgres',
     url: 'postgresql://neondb_owner:npg_B3SD1CtAOyMq@ep-gentle-violet-a7rfsa0h-pooler.ap-southeast-2.aws.neon.tech/from-house1?sslmode=require&channel_binding=require',
-    entities: [User,Category,Video,Restaurant,Meal,Cart,Order,CartItem,OrderItem,Rating,Reaction,Post,Country,Follow,Like],
+    entities: [User,Category,Video,Restaurant,Meal,Cart,Order,CartItem,OrderItem,Rating,Reaction,Post,Country,Follow,Like,Reaction,Reel],
      synchronize: false,
     migrations: ["dist/db/migrations/*.js"]
 }

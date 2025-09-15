@@ -22,6 +22,7 @@ import { CountryModule } from './country/country.module';
 import { HomeModule } from './home-page/home.module';
 import { FollowModule } from './follow/follow.module';
 import { LikeModule } from './like/like.module';
+import { ReelModule } from './reel/reel.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -42,7 +43,9 @@ import { LikeModule } from './like/like.module';
     CountryModule,
     HomeModule,
     FollowModule,
-    LikeModule
+    LikeModule,
+    ReactionModule,
+    ReelModule
   ],
 controllers:[AppController],
 providers:[AppService]

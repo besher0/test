@@ -14,30 +14,30 @@ export class FollowService {
     @InjectRepository(Restaurant) private restaurantRepo: Repository<Restaurant>,
   ) {}
 
-  async toggleFollow(user: User, restaurantId: string) {
-    const restaurant = await this.restaurantRepo.findOne({ where: { id: restaurantId } });
-    if (!restaurant) throw new NotFoundException('Restaurant not found');
+async toggleFollow(userId: string, restaurantId: string) {
+  const user = await this.userRepo.findOne({ where: { id: userId } });
+  const restaurant = await this.restaurantRepo.findOne({ where: { id: restaurantId } });
 
-    const existing = await this.followRepo.findOne({
-      where: { user: { id: user.id }, restaurant: { id: restaurantId } },
-    });
+  if (!user || !restaurant) throw new NotFoundException('User or Restaurant not found');
 
-    if (existing) {
-      await this.followRepo.remove(existing);
-      return { followed: false, restaurantId };
-    } else {
-      const follow = this.followRepo.create({
-        user: { id: user.id } as User,   // ✅ أهم تعديل
-        restaurant,
-      });
-      await this.followRepo.save(follow);
-      return { followed: true, restaurantId };
-    }
+  const existing = await this.followRepo.findOne({
+    where: { user: { id: userId }, restaurant: { id: restaurantId } },
+  });
+
+  if (existing) {
+    await this.followRepo.delete(existing.id);
+    return { followed: false };
   }
 
-  async getFollowedRestaurants(user: User) {
+  const follow = this.followRepo.create({ user, restaurant });
+  await this.followRepo.save(follow);
+  return { followed: true };
+}
+
+
+  async getFollowedRestaurants(userId: string) {
     const follows = await this.followRepo.find({
-      where: { user: { id: user.id } },
+      where: { user: { id: userId } },
       relations: ['restaurant'],
     });
 

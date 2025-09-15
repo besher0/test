@@ -20,8 +20,7 @@ export class Meal {
   @Column({ nullable: true })
   description: string;
 
-  @ApiProperty({ required: true })
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column({ type: 'float', default: 0 , nullable: true})
   price: number;
 
   @ApiProperty({ required: false })
