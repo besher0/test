@@ -96,10 +96,18 @@ export class ReactionService {
   return { reacted: true, type };
 }
 
-  // async getUserReaction(user: User, postId: string) {
-  //   const reaction = await this.reactionRepo.findOne({
-  //     where: { user: { id: user.id }, post: { id: postId } },
-  //   });
-  //   return reaction ? reaction.type : null;
-  // }
+async getReelReactionsCount(reelId: string) {
+  const qb = this.reactionRepo.createQueryBuilder('reaction')
+    .select('reaction.type', 'type')
+    .addSelect('COUNT(reaction.id)', 'count')
+    .where('reaction.reelId = :reelId', { reelId })
+    .groupBy('reaction.type');
+
+  const rows: { type: ReactionType; count: string }[] = await qb.getRawMany();
+  const result: Record<string, number> = {};
+  rows.forEach((r) => {
+    result[r.type] = parseInt(r.count, 10);
+  });
+  return result;
+}
 }

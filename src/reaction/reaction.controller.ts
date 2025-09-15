@@ -35,11 +35,22 @@ export class ReactionController {
     return this.reactionService.getPostReactionsCount(postId);
   }
 
-  // @UseGuards(JwtAuthGuard)
-  // @Get(':postId/me')
-  // @ApiOperation({ summary: "Get (':postId/me')".trim() })
-  // @ApiResponse({ status: 200, description: 'Success' })
-  // myReaction(@CurrentUser() user: User, @Param('postId') postId: string) {
-  //   return this.reactionService.getUserReaction(user, postId);
-  // }
+  @Post('reel/:reelId')
+  @ApiOperation({ summary: 'تفاعل (toggle) مع ريل — like/love/fire' })
+  @ApiParam({ name: 'reelId', description: 'معرّف الريل' })
+  @ApiResponse({ type: ReactResponseDto })
+  async reactOnReel(
+    @CurrentUser() user: User,
+    @Param('reelId') reelId: string,
+    @Body() dto: ReactDto,
+  ) {
+    return await this.reactionService.toggleReelReaction(user.id, reelId, dto.type);
+  }
+
+    @Get('reel/:reelId/summary')
+  @ApiOperation({ summary: 'إرجاع عدد التفاعلات لكل نوع على ريل' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  summaryReel(@Param('reelId') reelId: string) {
+    return this.reactionService.getReelReactionsCount(reelId);
+  }
 }
