@@ -1,11 +1,17 @@
-import { IsInt, Min, Max, IsUUID } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
-export class CreateRatingDto {
-  @IsUUID()
-  restaurantId: string;
+export class CreateRatingWithImageDto {
+  @ApiProperty({ example: 5, description: 'Score of the rating (1-5)' })
+  score: number;
 
-  @IsInt()
-  @Min(1)
-  @Max(5)
-  value: number;
+  @ApiProperty({ example: 'Great food and service!', required: false })
+  comment?: string;
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'Optional image upload for the rating',
+    required: false,
+  })
+  file?: any; // Swagger يتعرف أنه ملف
 }

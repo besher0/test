@@ -17,20 +17,32 @@ export class CountryService {
 
   ) {}
 
- async create(dto: CreateCountryDto, file?: Express.Multer.File){
+ async create(dto: CreateCountryDto, imageFile?: Express.Multer.File,logoFile?: Express.Multer.File){
     let imageUrl: string | null = null;
-
-    if (file) {
+    let logoUrl: string | null = null;
+    if (imageFile) {
       const result: UploadApiResponse = await this.cloudinaryService.uploadImage(
-        file,
+        imageFile,
         'countries', // 📂 مجلد Cloudinary
       );
+        console.log('Uploaded image:', result.secure_url); // ✅ تأكد
+
       imageUrl = result.secure_url;
+    }
+        if (logoFile) {
+      const result: UploadApiResponse = await this.cloudinaryService.uploadImage(
+        logoFile,
+        'countries', // 📂 مجلد Cloudinary
+      );
+        console.log('Uploaded logo:', result.secure_url); // ✅ تأكد
+
+      logoUrl = result.secure_url;
     }
 
     const country = this.countryRepo.create({
-      name: dto.name,
-      image_url: imageUrl,
+      name: dto.name,     
+      imageUrl: imageUrl,
+      logoImage:logoUrl,
     });
 
     return await this.countryRepo.save(country);

@@ -10,6 +10,6 @@ import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
   imports: [TypeOrmModule.forFeature([Country]),CloudinaryModule],
   providers: [CountryService],
   controllers: [CountryController],
-  exports: [CountryService],
+  exports: [CountryService,TypeOrmModule],
 })
 export class CountryModule {}

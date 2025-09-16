@@ -12,8 +12,15 @@ export class CreateCountryDto {
     type: 'string',
     format: 'binary',
     description: 'Country image file',
-    required: true,
+    required: false,
   })
-  file: any;
+  image?: any;
 
+    @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'Country logoImage file',
+    required: false,
+  })
+  logoImage?: any;
 }

@@ -18,6 +18,8 @@ import { Follow } from 'src/follow/follow.entity';
 import { Like } from 'src/like/like.entity';
 import { Post } from 'src/post/post.entity';
 import { Reel } from 'src/reel/reel.entity';
+import { RatingReply } from 'src/rating/rating-reply.entity';
+import { Country } from 'src/country/county.entity';
 
 @Entity()
 export class Restaurant {
@@ -54,6 +56,23 @@ export class Restaurant {
   @Column({ nullable: true })
   logo_url: string;
 
+    @ApiProperty({ example: 'https://example.com/main-image.png', required: false })
+  @Column({type: 'varchar', nullable: true })
+  mainImage: string|null;
+
+  @ApiProperty({ example: 'مطعم يقدم أشهى المأكولات الشعبية' })
+  @Column({ type: 'text', nullable: true })
+  description: string|null;
+
+   @ApiProperty({ example: 'من الساعة 12 ظهراً إلى 9 مساءً' })
+  @Column({ type: 'varchar',nullable: true })
+  workingHours: string|null;
+
+  @ApiProperty({ description: 'Country', type: () => Country })
+  @ManyToOne(() => Country, (country) => country.restaurants, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'countryId' })
+  country: Country | null;
+
   @ApiProperty({ 
     description: 'Owner user',
     type: () => User 
@@ -85,6 +104,9 @@ export class Restaurant {
   })
   @OneToMany(() => Rating, (rating) => rating.restaurant, { cascade: true })
   ratings: Rating[];
+
+  @OneToMany(() => RatingReply, (reply) => reply.restaurant)
+  replies: RatingReply[];
 
   @ApiProperty({ 
     example: 4.7 

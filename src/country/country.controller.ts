@@ -1,11 +1,11 @@
 /* eslint-disable prettier/prettier */
-import { Controller, Get, Post, Body, Param, Delete, Put, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { CountryService } from './country.service';
 import { CreateCountryDto } from './dto/create-country.dto';
 import { UpdateCountryDto } from './dto/update-country.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { Country } from './county.entity';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Countries')
 @Controller('countries')
@@ -16,12 +16,17 @@ export class CountryController {
   @ApiOperation({ summary: 'Create a new country with image (Cloudinary)' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, type: Country })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileFieldsInterceptor([
+  { name: 'image', maxCount: 1 },
+  { name: 'logoImage', maxCount: 1 },
+]))
   async create(
     @Body() dto: CreateCountryDto,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    return this.countryService.create(dto, file);
+  @UploadedFiles() files: { image?: Express.Multer.File[], logoImage?: Express.Multer.File[] },
+) {
+  const image = files.image?.[0];
+  const logoImage = files.logoImage?.[0];
+  return this.countryService.create(dto, image, logoImage);
   }
 
   @Get()

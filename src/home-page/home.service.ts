@@ -1,6 +1,4 @@
 /* eslint-disable prettier/prettier */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Not, Repository } from 'typeorm';
@@ -36,6 +34,7 @@ export class HomeService {
         // نجيب الوجبات المفضلة
         favoriteMeals = await this.mealRepo.find({
           where: { id: In(favIds) },
+          relations: ['restaurant'],
           take: 7,
         });
 
@@ -44,17 +43,18 @@ export class HomeService {
           const needed = 7 - favoriteMeals.length;
           const extraMeals = await this.mealRepo.find({
             where: { id: Not(In(favIds)) },
+            relations: ['restaurant'],
             take: needed,
           });
           favoriteMeals = [...favoriteMeals, ...extraMeals];
         }
       } else {
         // لو ما عنده ولا وجبة
-        favoriteMeals = await this.mealRepo.find({ take: 7 });
+        favoriteMeals = await this.mealRepo.find({ take: 7, relations: ['restaurant'], });
       }
     } else {
       // fallback: لو ما في توكن
-      favoriteMeals = await this.mealRepo.find({ take: 7 });
+      favoriteMeals = await this.mealRepo.find({ take: 7 ,relations: ['restaurant'],});
     }
 
     // 2. المطابخ العربية (من جدول Country)
@@ -64,24 +64,38 @@ export class HomeService {
     });
 
     // 3. المطاعم الموصى بها
-    const rawRestaurants = await this.restRepo
-      .createQueryBuilder('r')
-      .leftJoin('r.ratings', 'rating')
-      .addSelect('AVG(rating.value)', 'avg_rating')
-      .groupBy('r.id')
-      .orderBy('avg_rating', 'DESC')
-      .limit(7)
-      .getRawMany();
+// const rawRestaurants = await this.restRepo
+//   .createQueryBuilder('r')
+//   .leftJoin('r.ratings', 'rating')
+//   .select([
+//     'r.id AS id',
+//     'r.name AS name',
+//     'r.logo_url AS logoUrl',
+//     'r.description AS description',
+//     'AVG(rating.score) AS avgRating',
+//   ])
+//   .groupBy('r.id')
+//   .addGroupBy('r.name')
+//   .addGroupBy('r.logo_url')
+//   .addGroupBy('r.description')
+//   .orderBy('avgRating', 'DESC')
+//   .limit(7)
+//   .getRawMany();
 
-    const recommendedRestaurants = rawRestaurants.map((r) => ({
-      id: r.r_id,
-      name: r.r_name,
-      location: r.r_location,
-      logoUrl: r.r_logo_url,
-      averageRating: parseFloat(r.avg_rating) || 0,
-    }));
+const recommendedRestaurants = await this.restRepo.find({
+  order: { averageRating: 'DESC' },
+  take: 7,
+  select: ['id', 'name', 'logo_url', 'description', 'averageRating'],
+});
+
     return {
-      favoriteMeals,
+    favoriteMeals: favoriteMeals.map((meal) => ({
+    id: meal.id,
+    name: meal.name,
+    image:meal.image_url,
+    duration:meal.preparationTime,
+    restaurant: meal.restaurant ? { id: meal.restaurant.id, name: meal.restaurant.name } : null,
+     })),
       arabicKitchens,
       recommendedRestaurants,
     };

@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateRestaurantDto {
@@ -9,7 +9,7 @@ export class CreateRestaurantDto {
   })
   @IsNotEmpty()
   @IsString()
-  name: string;
+  name?: string;
 
   @ApiProperty({ 
     description: 'Restaurant location',
@@ -29,6 +29,12 @@ export class CreateRestaurantDto {
   @IsString()
   Identity?: string;
 
+  @ApiPropertyOptional({ example: 'مطعم يقدم أشهى المأكولات الشعبية' })
+  description?: string;
+
+  @ApiPropertyOptional({ example: 'من الساعة 12 ظهراً إلى 9 مساءً' })
+  workingHours?: string;
+
   @ApiProperty({ 
     description: 'Logo URL',
     required: false,
@@ -38,18 +44,12 @@ export class CreateRestaurantDto {
   @IsString()
   logo_url?: string;
 
-  // @ApiProperty({ 
-  //   // description: 'Category ID',
-  //   required: false,
-  //   // example: '22222222-2222-4222-8222-222222222222'  
-  // })
-  @IsOptional()
-  categoryId?: string;
+  @ApiPropertyOptional({ example: 'https://example.com/main-image.png' })
+  mainImage?: string;
 
-  // @ApiProperty({ 
-  //   description: 'Owner ID',
-  //   example: '11111111-1111-4111-8111-111111111111'  
-  // })
-  // @IsNotEmpty()
-  // ownerId: string;
+  @ApiPropertyOptional({ example: '33333333-3333-4333-8333-333333333333' })
+  countryId?: string;
+
+  @ApiPropertyOptional({ example: '11111111-2222-3333-4444-555555555555' })
+  categoryId?: string;
 }
