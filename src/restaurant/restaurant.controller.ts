@@ -212,7 +212,7 @@ async getProfile(@Param('id') id: string) {
   ) {
     return this.restaurantService.getRestaurantDishes(restaurantId, categoryId);
   }
-
+  @ApiOperation({ summary: 'Get all images of a restaurant' })
   @ApiParam({ name: 'restaurantId', type: String, description: 'Restaurant ID' })
   @Get(':restaurantId/images')
   getImages(@Param('restaurantId') restaurantId: string) {
