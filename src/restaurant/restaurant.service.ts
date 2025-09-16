@@ -297,8 +297,9 @@ async updateRestaurant(
     if (categoryId) {
       query.andWhere('meal.categoryId = :categoryId', { categoryId });
     }
+  const meals = await query.getMany();
 
-    return await query.getMany();
+  return { meals };
   }
 
   async getImages(restaurantId: string) {

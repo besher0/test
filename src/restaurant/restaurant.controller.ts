@@ -219,6 +219,7 @@ async getProfile(@Param('id') id: string) {
     return this.restaurantService.getImages(restaurantId);
   }
 
+    @ApiOperation({ summary: 'Upload a new image for a restaurant' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiParam({ name: 'restaurantId', type: String, description: 'Restaurant ID' })
@@ -239,6 +240,7 @@ async getProfile(@Param('id') id: string) {
     return this.restaurantService.addImage(restaurantId, user.id, file);
   }
 
+    @ApiOperation({ summary: 'Delete an image of a restaurant' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiParam({ name: 'imageId', type: String, description: 'Image ID' })
@@ -247,12 +249,14 @@ async getProfile(@Param('id') id: string) {
     return this.restaurantService.deleteImage(imageId, user.id);
   }
 
+    @ApiOperation({ summary: 'Get all videos of a restaurant' })
 @ApiParam({ name: 'restaurantId', type: String, description: 'Restaurant ID' })
   @Get(':restaurantId/videos')
   getVideos(@Param('restaurantId') restaurantId: string) {
     return this.restaurantService.getVideos(restaurantId);
   }
 
+    @ApiOperation({ summary: 'Upload a new video for a restaurant' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiParam({ name: 'restaurantId', type: String, description: 'Restaurant ID' })
@@ -275,6 +279,7 @@ async getProfile(@Param('id') id: string) {
     return this.restaurantService.addVideo(restaurantId, user.id, file);
   }
 
+    @ApiOperation({ summary: 'Delete a video of a restaurant' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiParam({ name: 'videoId', type: String, description: 'Video ID' })
