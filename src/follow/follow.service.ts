@@ -41,7 +41,7 @@ async toggleFollow(userId: string, restaurantId: string) {
       relations: ['restaurant'],
     });
 
-    return follows.map((f) => f.restaurant);
+return { follows: follows.map((f) => f.restaurant) };
   }
 
 }

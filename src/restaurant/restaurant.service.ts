@@ -341,7 +341,7 @@ async getRestaurantUpperProfile(restaurantId: string, userId?: string): Promise<
         relations: ['images'],
       });
       if (!restaurant) throw new NotFoundException('Restaurant not found');
-      return restaurant.images;
+      return {images:restaurant.images};
   }
 
   async addImage(restaurantId: string, userId: string, file: Express.Multer.File) {
@@ -375,7 +375,7 @@ async getRestaurantUpperProfile(restaurantId: string, userId?: string): Promise<
       relations: ['videos'],
     });
     if (!restaurant) throw new NotFoundException('Restaurant not found');
-    return restaurant.videos;
+    return { videos: restaurant.videos }
   }
 
   async addVideo(restaurantId: string, userId: string, file: Express.Multer.File) {
