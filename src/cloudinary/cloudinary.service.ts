@@ -42,4 +42,12 @@ export class CloudinaryService {
       uploadStream.end(file.buffer);
     });
   }
+
+    generateThumbnail(publicId: string): string {
+    return this.cloudinary.url(publicId, {
+      resource_type: 'video',
+      format: 'jpg',
+      start_offset: '1',
+    });
+  }
 }

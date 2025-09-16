@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Restaurant } from './restaurant.entity';
@@ -12,6 +12,8 @@ import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { Country } from 'src/country/county.entity';
 import { Rating } from 'src/rating/rating.entity';
 import { Meal } from 'src/meal/meal.entity';
+import { RestaurantImage } from './restaurant-image.entity';
+import { RestaurantVideo } from './restaurant-video.entity';
 
 // واجهة Response مخصصة
 export interface RestaurantResponse extends Omit<Restaurant, 'owner'> {
@@ -38,7 +40,12 @@ export class RestaurantService {
     private readonly cloudinaryService: CloudinaryService, 
     @InjectRepository(Rating)
     private readonly ratingRepo: Repository<Rating>,
-      @InjectRepository(Meal) private mealRepo: Repository<Meal>, 
+    @InjectRepository(Meal)
+    private mealRepo: Repository<Meal>, 
+    @InjectRepository(RestaurantImage)
+    private imageRepo: Repository<RestaurantImage>,
+    @InjectRepository(RestaurantVideo)
+    private videoRepo: Repository<RestaurantVideo>,
   ) {}
 
   private mapOwner(user: User) {
@@ -244,55 +251,129 @@ async updateRestaurant(
   };
 }
 
-async getRestaurantReviews(restaurantId: string) {
-      const restaurant = await this.restaurantRepo.findOne({
-      where: { id: restaurantId },
-      select: ['id', 'name', 'averageRating'],
+  async getRestaurantReviews(restaurantId: string) {
+        const restaurant = await this.restaurantRepo.findOne({
+        where: { id: restaurantId },
+        select: ['id', 'name', 'averageRating'],
+      });
+
+      if (!restaurant) {
+        throw new Error('Restaurant not found');
+      }
+    // نجيب كل التقييمات مع المستخدمين
+    const ratings = await this.ratingRepo.find({
+      where: { restaurant: { id: restaurantId } },
+      relations: ['user'],
+      order: { createdAt: 'DESC' },
     });
 
-    if (!restaurant) {
-      throw new Error('Restaurant not found');
-    }
-  // نجيب كل التقييمات مع المستخدمين
-  const ratings = await this.ratingRepo.find({
-    where: { restaurant: { id: restaurantId } },
-    relations: ['user'],
-    order: { createdAt: 'DESC' },
-  });
-
-  // نجهّز الرد
-  return {
-    avgRating: restaurant.averageRating,
-    totalReviewers: ratings.length,
-    reviews: ratings.map((rating) => ({
-      id: rating.id,
-      score: rating.score,
-      comment: rating.comment,
-      createdAt: rating.createdAt,
-      user: rating.user
-        ? {
-            id: rating.user.id,
-            name: rating.user.firstName,
-            profile_picture: rating.user.profile_picture ?? null,
-          }
-        : null,
-    })),
-  };
-}
-async getRestaurantDishes(restaurantId: string, categoryId?: string) {
-  const query = this.mealRepo
-    .createQueryBuilder('meal')
-    .leftJoinAndSelect('meal.restaurant', 'restaurant')
-    .leftJoinAndSelect('meal.category', 'category')
-    .where('meal.restaurantId = :restaurantId', { restaurantId });
-
-  if (categoryId) {
-    query.andWhere('meal.categoryId = :categoryId', { categoryId });
+    // نجهّز الرد
+    return {
+      avgRating: restaurant.averageRating,
+      totalReviewers: ratings.length,
+      reviews: ratings.map((rating) => ({
+        id: rating.id,
+        score: rating.score,
+        comment: rating.comment,
+        createdAt: rating.createdAt,
+        user: rating.user
+          ? {
+              id: rating.user.id,
+              name: rating.user.firstName,
+              profile_picture: rating.user.profile_picture ?? null,
+            }
+          : null,
+      })),
+    };
   }
 
-  return await query.getMany();
-}
+  async getRestaurantDishes(restaurantId: string, categoryId?: string) {
+    const query = this.mealRepo
+      .createQueryBuilder('meal')
+      .leftJoinAndSelect('meal.restaurant', 'restaurant')
+      .leftJoinAndSelect('meal.category', 'category')
+      .where('meal.restaurantId = :restaurantId', { restaurantId });
 
+    if (categoryId) {
+      query.andWhere('meal.categoryId = :categoryId', { categoryId });
+    }
+
+    return await query.getMany();
+  }
+
+  async getImages(restaurantId: string) {
+      const restaurant = await this.restaurantRepo.findOne({
+        where: { id: restaurantId },
+        relations: ['images'],
+      });
+      if (!restaurant) throw new NotFoundException('Restaurant not found');
+      return restaurant.images;
+  }
+
+  async addImage(restaurantId: string, userId: string, file: Express.Multer.File) {
+      const restaurant = await this.restaurantRepo.findOne({
+        where: { id: restaurantId },
+        relations: ['owner'],
+      });
+      if (!restaurant) throw new NotFoundException('Restaurant not found');
+      if (restaurant.owner.id !== userId) throw new ForbiddenException('Not allowed');
+
+    const uploadResult = await this.cloudinaryService.uploadImage(file, 'restaurants/images');
+    const newImage = this.imageRepo.create({ url: uploadResult.secure_url, restaurant });
+    return this.imageRepo.save(newImage);
+  }
+
+  async deleteImage(imageId: string, userId: string) {
+      const image = await this.imageRepo.findOne({
+        where: { id: imageId },
+        relations: ['restaurant', 'restaurant.owner'],
+      });
+      if (!image) throw new NotFoundException('Image not found');
+      if (image.restaurant.owner.id !== userId) throw new ForbiddenException('Not allowed');
+
+      await this.imageRepo.delete(imageId);
+      return { success: true };
+  }
+
+  async getVideos(restaurantId: string) {
+    const restaurant = await this.restaurantRepo.findOne({
+      where: { id: restaurantId },
+      relations: ['videos'],
+    });
+    if (!restaurant) throw new NotFoundException('Restaurant not found');
+    return restaurant.videos;
+  }
+
+  async addVideo(restaurantId: string, userId: string, file: Express.Multer.File) {
+    const restaurant = await this.restaurantRepo.findOne({
+      where: { id: restaurantId },
+      relations: ['owner'],
+    });
+    if (!restaurant) throw new NotFoundException('Restaurant not found');
+    if (restaurant.owner.id !== userId) throw new ForbiddenException('Not allowed');
+
+     const uploadResult = await this.cloudinaryService.uploadVideo(file, 'restaurants/videos');
+    const thumbnailUrl = this.cloudinaryService.generateThumbnail(uploadResult.public_id);
+
+   const newVideo = this.videoRepo.create({
+      videoUrl: uploadResult.secure_url,
+      thumbnailUrl,
+      restaurant,
+    });
+    return this.videoRepo.save(newVideo);
+  }
+
+  async deleteVideo(videoId: string, userId: string) {
+    const video = await this.videoRepo.findOne({
+      where: { id: videoId },
+      relations: ['restaurant', 'restaurant.owner'],
+    });
+    if (!video) throw new NotFoundException('Video not found');
+    if (video.restaurant.owner.id !== userId) throw new ForbiddenException('Not allowed');
+
+    await this.videoRepo.delete(videoId);
+    return { success: true };
+  }
 }
 //316dd92a-bae2-4849-9eb5-a62447b4433a
 //633288b7-dff1-4f5b-b88d-cf884d4da5c4

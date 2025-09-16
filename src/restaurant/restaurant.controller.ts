@@ -213,6 +213,77 @@ async getProfile(@Param('id') id: string) {
     return this.restaurantService.getRestaurantDishes(restaurantId, categoryId);
   }
 
+  @ApiParam({ name: 'restaurantId', type: String, description: 'Restaurant ID' })
+  @Get(':restaurantId/images')
+  getImages(@Param('restaurantId') restaurantId: string) {
+    return this.restaurantService.getImages(restaurantId);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiParam({ name: 'restaurantId', type: String, description: 'Restaurant ID' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })  @Post(':restaurantId/images')
+  @UseInterceptors(FileInterceptor('file'))
+  addImage(
+    @Param('restaurantId') restaurantId: string,
+    @CurrentUser() user: User,
+@UploadedFile() file: Express.Multer.File,  ) {
+    return this.restaurantService.addImage(restaurantId, user.id, file);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiParam({ name: 'imageId', type: String, description: 'Image ID' })
+  @Delete('images/:imageId')
+  deleteImage(@Param('imageId') imageId: string, @CurrentUser() user: User) {
+    return this.restaurantService.deleteImage(imageId, user.id);
+  }
+
+@ApiParam({ name: 'restaurantId', type: String, description: 'Restaurant ID' })
+  @Get(':restaurantId/videos')
+  getVideos(@Param('restaurantId') restaurantId: string) {
+    return this.restaurantService.getVideos(restaurantId);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiParam({ name: 'restaurantId', type: String, description: 'Restaurant ID' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @Post(':restaurantId/videos')
+@UseInterceptors(FileInterceptor('file'))
+  addVideo(
+    @Param('restaurantId') restaurantId: string,
+    @CurrentUser() user: User,
+@UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.restaurantService.addVideo(restaurantId, user.id, file);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiParam({ name: 'videoId', type: String, description: 'Video ID' })
+  @Delete('videos/:videoId')
+  deleteVideo(@Param('videoId') videoId: string, @CurrentUser() user: User) {
+    return this.restaurantService.deleteVideo(videoId, user.id);
+  }
+}
+
   // @Get('sorted/by-rating')
   // @ApiOperation({ summary: 'Get restaurants sorted by rating' })
   // @ApiQuery({ 
@@ -247,5 +318,3 @@ async getProfile(@Param('id') id: string) {
   // @Query('order') order: 'ASC' | 'DESC' = 'DESC',) {
   //   return this.restaurantService.findAllSortedByRating(order);
   // } 
-
-}

@@ -20,6 +20,8 @@ import { Post } from 'src/post/post.entity';
 import { Reel } from 'src/reel/reel.entity';
 import { RatingReply } from 'src/rating/rating-reply.entity';
 import { Country } from 'src/country/county.entity';
+import { RestaurantImage } from './restaurant-image.entity';
+import { RestaurantVideo } from './restaurant-video.entity';
 
 @Entity()
 export class Restaurant {
@@ -125,6 +127,16 @@ export class Restaurant {
 
     @OneToMany(() => Reel, (reel) => reel.restaurant)
   reels: Reel[];
+
+  @OneToMany(() => RestaurantImage, (image) => image.restaurant, {
+    cascade: true,
+  })
+  images: RestaurantImage[];
+
+  @OneToMany(() => RestaurantVideo, (video) => video.restaurant, {
+    cascade: true,
+  })
+  videos: RestaurantVideo[];
 
   @ApiProperty({ 
     example: '2025-09-13T10:00:00.000Z' 
