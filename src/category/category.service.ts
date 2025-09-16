@@ -22,8 +22,18 @@ export class CategoryService {
     return this.categoryRepository.save(category);
   }
 
-  findAll(): Promise<Category[]> {
-    return this.categoryRepository.find();
+ async findAll() {
+ const categories = await this.categoryRepository.find({
+    select: ['id', 'name', 'image_url'],
+  });
+
+  return {
+    category: categories.map(c => ({
+      id: c.id,
+      name: c.name,
+      imageUrl: c.image_url || undefined,
+    })),
+  };
   }
 
 // async findByUser(userId: number): Promise<Category[]> {
