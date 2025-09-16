@@ -31,7 +31,7 @@ export const dataSourceOptions: DataSourceOptions = {
     type: 'postgres',
     url: 'postgresql://neondb_owner:npg_B3SD1CtAOyMq@ep-gentle-violet-a7rfsa0h-pooler.ap-southeast-2.aws.neon.tech/from-house1?sslmode=require&channel_binding=require',
     entities: [User,Category,Video,Restaurant,Meal,Cart,Order,CartItem,OrderItem,Rating,Reaction,Post,Country,Follow,Like,Reaction,Reel,RatingReply,RestaurantImage,RestaurantVideo],
-     synchronize: false,
+    synchronize: false,
     migrations: ["dist/db/migrations/*.js"]
 }
 

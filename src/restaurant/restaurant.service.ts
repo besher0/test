@@ -14,6 +14,8 @@ import { Rating } from 'src/rating/rating.entity';
 import { Meal } from 'src/meal/meal.entity';
 import { RestaurantImage } from './restaurant-image.entity';
 import { RestaurantVideo } from './restaurant-video.entity';
+import { Follow } from 'src/follow/follow.entity';
+import { RestaurantProfileDto } from './dto/RestaurantProfileDto';
 
 // واجهة Response مخصصة
 export interface RestaurantResponse extends Omit<Restaurant, 'owner'> {
@@ -46,6 +48,8 @@ export class RestaurantService {
     private imageRepo: Repository<RestaurantImage>,
     @InjectRepository(RestaurantVideo)
     private videoRepo: Repository<RestaurantVideo>,
+    @InjectRepository(Follow)   
+    private readonly followRepo: Repository<Follow>,
   ) {}
 
   private mapOwner(user: User) {
@@ -251,6 +255,35 @@ async updateRestaurant(
   };
 }
 
+async getRestaurantUpperProfile(restaurantId: string, userId?: string): Promise<RestaurantProfileDto> {
+  const restaurant = await this.restaurantRepo.findOne({
+    where: { id: restaurantId },
+  });
+
+  if (!restaurant) throw new NotFoundException('Restaurant not found');
+
+  // عدد المتابعين
+  const followersCount = await this.followRepo.count({
+    where: { restaurant: { id: restaurantId } },
+  });
+  // هل المستخدم الحالي متابع
+  const isFollowed:boolean = userId
+    ? await this.followRepo.exist({
+        where: { restaurant: { id: restaurantId }, user: { id: userId } },
+      })
+    : false;
+
+  return {
+    id: restaurant.id,
+    name: restaurant.name,
+    profileImage: restaurant.logo_url,
+    rating: restaurant.averageRating,
+    followersCount,
+    isFollowed,
+  };
+}
+
+
   async getRestaurantReviews(restaurantId: string) {
         const restaurant = await this.restaurantRepo.findOne({
         where: { id: restaurantId },
@@ -375,6 +408,8 @@ async updateRestaurant(
     await this.videoRepo.delete(videoId);
     return { success: true };
   }
+
+
 }
 //316dd92a-bae2-4849-9eb5-a62447b4433a
 //633288b7-dff1-4f5b-b88d-cf884d4da5c4

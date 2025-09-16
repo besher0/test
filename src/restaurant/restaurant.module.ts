@@ -13,9 +13,10 @@ import { Rating } from 'src/rating/rating.entity';
 import { Meal } from 'src/meal/meal.entity';
 import { RestaurantImage } from './restaurant-image.entity';
 import { RestaurantVideo } from './restaurant-video.entity';
+import { Follow } from 'src/follow/follow.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Restaurant, User, Category,Country,Rating,Meal,RestaurantImage,RestaurantVideo]),CloudinaryModule,CountryModule],
+  imports: [TypeOrmModule.forFeature([Restaurant, User, Category,Country,Rating,Meal,RestaurantImage,RestaurantVideo,Follow]),CloudinaryModule,CountryModule],
   providers: [RestaurantService],
   controllers: [RestaurantController],
   exports: [RestaurantService],

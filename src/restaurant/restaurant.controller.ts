@@ -10,6 +10,8 @@ import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
 import { RestaurantGuard } from 'src/auth/guards/restaurant.guard';
 import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import { RestaurantProfileDto } from './dto/RestaurantProfileDto';
+import { OptionalAuthGuard } from 'src/auth/guards/optional-auth.guard';
 
 
 @ApiTags('Restaurants')
@@ -197,6 +199,18 @@ async getProfile(@Param('id') id: string) {
   return this.restaurantService.getRestaurantProfile(id);
 }
 
+@ApiBearerAuth()
+@UseGuards(OptionalAuthGuard)
+@Get(':restaurantId/upperProfile')
+@ApiOkResponse({ type: RestaurantProfileDto })
+getRestaurantProfile(
+  @Param('restaurantId') restaurantId: string,
+  @CurrentUser() user?: User,
+) {
+  return this.restaurantService.getRestaurantUpperProfile(restaurantId, user?.id);
+}
+
+
   @Get(':id/reviews')
   @ApiOperation({ summary: 'Get all reviews of a restaurant (ratings + avg + count)' })
   @ApiResponse({ status: 200, description: 'List of reviews with avg rating and count' })
@@ -249,14 +263,14 @@ async getProfile(@Param('id') id: string) {
     return this.restaurantService.deleteImage(imageId, user.id);
   }
 
-    @ApiOperation({ summary: 'Get all videos of a restaurant' })
+  @ApiOperation({ summary: 'Get all videos of a restaurant' })
 @ApiParam({ name: 'restaurantId', type: String, description: 'Restaurant ID' })
   @Get(':restaurantId/videos')
   getVideos(@Param('restaurantId') restaurantId: string) {
     return this.restaurantService.getVideos(restaurantId);
   }
 
-    @ApiOperation({ summary: 'Upload a new video for a restaurant' })
+  @ApiOperation({ summary: 'Upload a new video for a restaurant' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiParam({ name: 'restaurantId', type: String, description: 'Restaurant ID' })
@@ -279,7 +293,7 @@ async getProfile(@Param('id') id: string) {
     return this.restaurantService.addVideo(restaurantId, user.id, file);
   }
 
-    @ApiOperation({ summary: 'Delete a video of a restaurant' })
+  @ApiOperation({ summary: 'Delete a video of a restaurant' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiParam({ name: 'videoId', type: String, description: 'Video ID' })
