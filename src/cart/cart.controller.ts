@@ -1,10 +1,11 @@
 /* eslint-disable prettier/prettier */
-import { Controller, Get, Post, Delete, Param, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, UseGuards,  } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AddToCartDto } from './dto/dto.createCart';
+import { User } from 'src/user/user.entity';
 
 type UserJwt = {
   sub: string;
@@ -40,38 +41,17 @@ export class CartController {
     return this.cartService.getUserCart(user.sub);
   }
 
-  @Post('add')
-  @ApiOperation({ summary: 'Add an item to cart' })
-  @ApiBody({ 
-    type: AddToCartDto,
-    examples: {
-      default: {
-        value: { mealId: 'meal-789', quantity: 2 }
-      }
-    }
-  })
-  @ApiResponse({ 
-    status: 201, 
-    description: 'Item added successfully',
-    schema: {
-      example: {
-        id: 'item-1',
-        mealId: 'meal-789',
-        quantity: 2,
-        name: 'Pizza Margherita',
-        price: 12.5
-      }
-    }
-  })
+@Post('add')
+@ApiOperation({ summary: 'Add an item to cart' })
+@ApiBody({ type: AddToCartDto })
 async addItem(
-  @Req() req,
-  @Param('mealId') mealId: string,
-  @Body('quantity') quantity: number,
+  @CurrentUser() user: User,
+  @Body() body: AddToCartDto,
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-  const userId = req.user.id;
-  return this.cartService.addItem(userId, mealId, quantity);
+  const { mealId, quantity } = body;
+  return this.cartService.addItem(user.id, mealId, quantity);
 }
+
 
   @Delete(':itemId')
   @ApiOperation({ summary: 'Delete (":itemId")'.trim() })
