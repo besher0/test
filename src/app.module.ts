@@ -14,7 +14,6 @@ import { AppService } from './app.service';
 import { RestaurantModule } from './restaurant/restaurant.module';
 import { MealModule } from './meal/meal.module';
 import { RatingModule } from './rating/rating.module';
-import { ReactionModule } from './reaction/reaction.module';
 import { PostModule } from './post/post.module';
 import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
@@ -22,7 +21,7 @@ import { CountryModule } from './country/country.module';
 import { HomeModule } from './home-page/home.module';
 import { FollowModule } from './follow/follow.module';
 import { LikeModule } from './like/like.module';
-import { ReelModule } from './reel/reel.module';
+import { ReelModule } from './story/reel.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -38,13 +37,11 @@ import { ReelModule } from './reel/reel.module';
     CartModule,
     OrderModule,
     RatingModule,
-    ReactionModule,
     PostModule,
     CountryModule,
     HomeModule,
     FollowModule,
     LikeModule,
-    ReactionModule,
     ReelModule
   ],
 controllers:[AppController],

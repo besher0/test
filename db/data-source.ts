@@ -13,15 +13,16 @@ import { Order } from 'src/order/order.entity';
 import { CartItem } from 'src/cart/cart-item.entity';
 import { OrderItem } from 'src/order/order-item.entity';
 import { Rating } from 'src/rating/rating.entity';
-import { Reaction } from 'src/reaction/reaction.entity';
+import { Reaction } from 'src/story/reaction.entity';
 import { Post } from 'src/post/post.entity';
 import { Country } from 'src/country/county.entity';
 import { Follow } from 'src/follow/follow.entity';
 import { Like } from 'src/like/like.entity';
-import { Reel } from 'src/reel/reel.entity';
 import { RatingReply } from 'src/rating/rating-reply.entity';
 import { RestaurantImage } from 'src/restaurant/restaurant-image.entity';
 import { RestaurantVideo } from 'src/restaurant/restaurant-video.entity';
+import { Story } from 'src/story/story.entity';
+import { PostReaction } from 'src/post/post-reaction.entity';
 
 /* eslint-disable prettier/prettier */
 config({ path: '.env' });
@@ -30,7 +31,7 @@ config({ path: '.env' });
 export const dataSourceOptions: DataSourceOptions = {
     type: 'postgres',
     url: 'postgresql://neondb_owner:npg_B3SD1CtAOyMq@ep-gentle-violet-a7rfsa0h-pooler.ap-southeast-2.aws.neon.tech/from-house1?sslmode=require&channel_binding=require',
-    entities: [User,Category,Video,Restaurant,Meal,Cart,Order,CartItem,OrderItem,Rating,Reaction,Post,Country,Follow,Like,Reaction,Reel,RatingReply,RestaurantImage,RestaurantVideo],
+    entities: [User,Category,Video,Restaurant,Meal,Cart,Order,CartItem,OrderItem,Rating,Post,PostReaction,Country,Follow,Like,Reaction,Story,RatingReply,RestaurantImage,RestaurantVideo,],
     synchronize: false,
     migrations: ["dist/db/migrations/*.js"]
 }

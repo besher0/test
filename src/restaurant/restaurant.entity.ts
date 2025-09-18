@@ -17,7 +17,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Follow } from 'src/follow/follow.entity';
 import { Like } from 'src/like/like.entity';
 import { Post } from 'src/post/post.entity';
-import { Reel } from 'src/reel/reel.entity';
+import { Story } from 'src/story/story.entity';
 import { RatingReply } from 'src/rating/rating-reply.entity';
 import { Country } from 'src/country/county.entity';
 import { RestaurantImage } from './restaurant-image.entity';
@@ -125,8 +125,8 @@ export class Restaurant {
   @OneToMany(() => Post, (post) => post.restaurant)
   posts: Post[];
 
-    @OneToMany(() => Reel, (reel) => reel.restaurant)
-  reels: Reel[];
+    @OneToMany(() => Story, (story) => story.restaurant)
+  stories: Story[];
 
   @OneToMany(() => RestaurantImage, (image) => image.restaurant, {
     cascade: true,

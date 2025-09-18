@@ -1,72 +1,108 @@
-/* eslint-disable prettier/prettier */
 import {
-  Body,
   Controller,
-  Delete,
-  Param,
   Post as HttpPost,
+  Patch,
+  Delete,
+  Get,
+  Body,
+  Param,
+  UploadedFile,
   UseGuards,
   UseInterceptors,
-  UploadedFile,
-  Put,
-  Get,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiConsumes,
-  ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
+import { User } from 'src/user/user.entity';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../auth/decorator/current-user.decorator';
-import { User } from 'src/user/user.entity';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { Post } from './post.entity';
+import { ReactToPostDto } from './dto/react-to-post.dto';
 
-@ApiTags('posts')
-@ApiBearerAuth()
+@ApiTags('Posts')
 @Controller('posts')
 export class PostController {
   constructor(private readonly postService: PostService) {}
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Create a post (only restaurant owners)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        text: { type: 'string' },
+      },
+    },
+  })
   @HttpPost()
-  @ApiOperation({ summary: 'إنشاء بوست جديد (فقط للمطاعم)' })
-  @ApiConsumes('multipart/form-data') // 👈 مهم
-  @UseInterceptors(FileInterceptor('mediaUrl'))
-  async create(@CurrentUser() user: User, @Body() dto: CreatePostDto,  @UploadedFile() file: Express.Multer.File,) {
-    return this.postService.createPost(user, dto,file);
-  }
-
-  @Get()
-  @ApiOperation({ summary: 'جلب كل البوستات' })
-  @ApiOkResponse({ type: [Post] })
-  async getAllPosts() {
-    return await this.postService.findAll();
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Put(':postId')
-  @ApiOperation({ summary: 'تعديل بوست (فقط لصاحب المطعم)' })
-  @ApiParam({ name: 'postId', description: 'معرّف البوست' })
-  async update(
+  @UseInterceptors(FileInterceptor('file'))
+  async createPost(
     @CurrentUser() user: User,
-    @Param('postId') postId: string,
+    @Body() dto: CreatePostDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (user.userType !== 'restaurant') {
+      throw new ForbiddenException('Only restaurant owners can create posts');
+    }
+
+    const fileUrl = file?.path;
+    const thumbnailUrl = file ? `thumbnail-of-${file.filename}` : undefined;
+
+    return this.postService.createPost(user, dto, fileUrl, thumbnailUrl);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update a post (only restaurant owners)' })
+  @ApiParam({ name: 'id', type: String, description: 'Post ID' })
+  @Patch(':id')
+  async updatePost(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
     @Body() dto: UpdatePostDto,
   ) {
-    return this.postService.updatePost(user, postId, dto);
+    return this.postService.updatePost(user, id, dto);
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Delete(':postId')
-  @ApiOperation({ summary: 'حذف بوست (فقط لصاحب المطعم)' })
-  @ApiParam({ name: 'postId', description: 'معرّف البوست' })
-  async delete(@CurrentUser() user: User, @Param('postId') postId: string) {
-    return this.postService.deletePost(user, postId);
+  @ApiOperation({ summary: 'Delete a post (only restaurant owners)' })
+  @ApiParam({ name: 'id', type: String, description: 'Post ID' })
+  @Delete(':id')
+  async deletePost(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.postService.deletePost(user, id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get posts from restaurants (all visible)' })
+  @Get()
+  async getPosts(@CurrentUser() user: User) {
+    return this.postService.getPostsForUser(user.id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'React to a post' })
+  @ApiParam({ name: 'id', type: String, description: 'Post ID' })
+  @HttpPost(':id/reactions')
+  async reactToPost(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @Body() dto: ReactToPostDto,
+  ) {
+    return this.postService.reactToPost(user, id, dto.type);
   }
 }

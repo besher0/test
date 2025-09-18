@@ -7,8 +7,8 @@ import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { Cart } from 'src/cart/cart.entity';
 import { Order } from 'src/order/order.entity';
 import { Rating } from 'src/rating/rating.entity';
-import { Reaction } from 'src/reaction/reaction.entity';
-import { Post } from 'src/post/post.entity';
+import { Reaction } from 'src/story/reaction.entity';
+// import { Post } from 'src/post/post.entity';
 import { Follow } from 'src/follow/follow.entity';
 import { Like } from 'src/like/like.entity';
 
@@ -84,9 +84,9 @@ export class User {
   @OneToMany(() => Rating, (rating) => rating.user)
   ratings: Rating[];
 
-  @ApiProperty()
-   @OneToMany(() => Post, (post) => post.owner)
-  posts: Post[];
+  // @ApiProperty()
+  //  @OneToMany(() => Post, (post) => post.owner)
+  // posts: Post[];
 
   // علاقة مع التفاعلات (المستخدم يتفاعل مع بوستات)
   @ApiProperty()
