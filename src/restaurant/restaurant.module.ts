@@ -14,10 +14,11 @@ import { Meal } from 'src/meal/meal.entity';
 import { RestaurantImage } from './restaurant-image.entity';
 import { RestaurantVideo } from './restaurant-video.entity';
 import { Follow } from 'src/follow/follow.entity';
+import { FilterService } from './filter.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Restaurant, User, Category,Country,Rating,Meal,RestaurantImage,RestaurantVideo,Follow]),CloudinaryModule,CountryModule],
-  providers: [RestaurantService],
+  providers: [RestaurantService,FilterService],
   controllers: [RestaurantController],
   exports: [RestaurantService],
 })

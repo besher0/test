@@ -12,6 +12,7 @@ import { RestaurantGuard } from 'src/auth/guards/restaurant.guard';
 import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { RestaurantProfileDto } from './dto/RestaurantProfileDto';
 import { OptionalAuthGuard } from 'src/auth/guards/optional-auth.guard';
+import { FilterService } from './filter.service';
 
 
 @ApiTags('Restaurants')
@@ -19,7 +20,7 @@ import { OptionalAuthGuard } from 'src/auth/guards/optional-auth.guard';
 export class RestaurantController {
   constructor(
     private readonly restaurantService: RestaurantService,
-    
+    private readonly filterService: FilterService
   ) {}
 //eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjNkODhkNWQxLTY0ZmMtNDkzMy1hYzY2LTU1MTEwZjJjNzNmNSIsImVtYWlsIjoiam9obi5kb2VAZWNjeGFtcGxlLmNvbSIsInVzZXJUeXBlIjoicmVzdGF1cmFudCIsImlhdCI6MTc1Nzg1NTA1MSwiZXhwIjoxNzU3ODk4MjUxfQ.4lP0X4Kz-fynxF0QdJsYz8-DDsIJR0Kks620GroZq7w"
   @Post()
@@ -53,32 +54,57 @@ export class RestaurantController {
     return this.restaurantService.create(dto,currentUser,file);
   }
 
-  @Get()
-@ApiOperation({ summary: 'Get all restaurants' })
-  @ApiOkResponse({ 
-    type: [Restaurant],  // array من الـ Entity
-    description: 'List of all restaurants'
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Success',
-    schema: { 
-      example: [
-        {
-          id: '33333333-3333-4333-8333-333333333333',
-          name: 'Italiano Pizza',
-          location: '123 Main Street, New York',
-          ownerId: '11111111-1111-4111-8111-111111111111',
-          categoryId: '22222222-2222-4222-8222-222222222222',
-          averageRating: 4.7,
-          createdAt: '2025-09-13T10:00:00.000Z',
-          updatedAt: '2025-09-13T10:00:00.000Z'
-        }
-      ] 
-    }
-  })  findAll() {
-    return this.restaurantService.findAll();
+//   @Get()
+// @ApiOperation({ summary: 'Get all restaurants' })
+//   @ApiOkResponse({ 
+//     type: [Restaurant],  // array من الـ Entity
+//     description: 'List of all restaurants'
+//   })
+//   @ApiResponse({ 
+//     status: 200, 
+//     description: 'Success',
+//     schema: { 
+//       example: [
+//         {
+//           id: '33333333-3333-4333-8333-333333333333',
+//           name: 'Italiano Pizza',
+//           location: '123 Main Street, New York',
+//           ownerId: '11111111-1111-4111-8111-111111111111',
+//           categoryId: '22222222-2222-4222-8222-222222222222',
+//           averageRating: 4.7,
+//           createdAt: '2025-09-13T10:00:00.000Z',
+//           updatedAt: '2025-09-13T10:00:00.000Z'
+//         }
+//       ] 
+//     }
+//   })  findAll() {
+//     return this.restaurantService.findAll();
+//   }
+
+  @Get('countries')
+  @ApiOperation({ summary: 'جلب قائمة الدول مع الفلترة والبحث' })
+  @ApiQuery({ name: 'category', required: false, example: 'عربي', description: 'اسم التصنيف (Category) للدول' })
+  @ApiQuery({ name: 'search', required: false, example: 'سوري', description: 'كلمة للبحث داخل اسم الدولة' })
+  getCountries(
+    @Query('category') category?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.filterService.getCountries(category, search);
   }
+
+  @ApiBearerAuth() 
+@UseGuards(OptionalAuthGuard)
+  @Get('meals')
+@ApiOperation({ summary: 'جلب قائمة الوجبات مع الفلترة والبحث' })
+@ApiQuery({ name: 'category', required: false, example: 'لحوم' })
+@ApiQuery({ name: 'search', required: false, example: 'برغر' })
+getMeals(
+  @CurrentUser() user?: User, // 👈 من الـ JwtAuthGuard
+  @Query('category') category?: string,
+  @Query('search') search?: string,
+) {
+  return this.filterService.getMeals(user?.id, category, search);
+}
 
   @Get(':id')
 @ApiOperation({ summary: 'Get a restaurant by ID' })
@@ -301,6 +327,30 @@ getRestaurantProfile(
   deleteVideo(@Param('videoId') videoId: string, @CurrentUser() user: User) {
     return this.restaurantService.deleteVideo(videoId, user.id);
   }
+
+@ApiBearerAuth()
+@UseGuards(OptionalAuthGuard)
+@Get()
+@ApiOperation({ summary: 'جلب قائمة المطاعم مع الفلترة والبحث' })
+@ApiQuery({ name: 'category', required: false, example: 'شعبي', description: 'اسم التصنيف (Category) للمطاعم' })
+@ApiQuery({ name: 'search', required: false, example: 'مطعم كذا', description: 'كلمة للبحث داخل اسم المطعم' })
+@ApiResponse({
+  status: 200,
+  description: 'قائمة المطاعم بنجاح',
+  schema: {
+    example: [
+      { id: 1, name: 'مطعم كذا', category: { id: 7, name: 'شعبي' }, isLiked: true },
+    ],
+  },
+})
+getRestaurants(
+  @CurrentUser() user: User,
+  @Query('category') category?: string,
+  @Query('search') search?: string,
+) {
+  return this.filterService.getRestaurants(user?.id, category, search);
+}
+
 }
 
   // @Get('sorted/by-rating')
