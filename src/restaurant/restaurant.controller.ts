@@ -276,7 +276,7 @@ getRestaurantProfile(
   addImage(
     @Param('restaurantId') restaurantId: string,
     @CurrentUser() user: User,
-@UploadedFile() file: Express.Multer.File,  ) {
+    @UploadedFile() file: Express.Multer.File,  ) {
     return this.restaurantService.addImage(restaurantId, user.id, file);
   }
 

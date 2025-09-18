@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException,  } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { Story } from './story.entity';
@@ -7,42 +7,106 @@ import { Reaction } from './reaction.entity';
 import { User } from 'src/user/user.entity';
 import { CreateStoryDto } from './dto/create-story.dto';
 import { UpdateStoryDto } from './dto/update-story.dto';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { Restaurant } from 'src/restaurant/restaurant.entity';
 
 @Injectable()
 export class StoryService {
   constructor(
     @InjectRepository(Story) private storyRepo: Repository<Story>,
     @InjectRepository(Reaction) private reactionRepo: Repository<Reaction>,
+    private readonly cloudinaryService: CloudinaryService,
+
+      @InjectRepository(Restaurant)
+ private readonly restaurantRepo:Repository<Restaurant>
   ) {}
 
-  async createStory(user: User, dto: CreateStoryDto, fileUrl?: string, thumbnailUrl?: string) {
+async createStory(user: User, dto: CreateStoryDto, file?: Express.Multer.File) {
     if (user.userType !== 'restaurant') {
       throw new ForbiddenException('Only restaurant owners can create stories');
     }
 
+    // ======= safer lookup using QueryBuilder (avoids findOne typings mismatch) =======
+    const restaurant = await this.restaurantRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.owner', 'owner')
+      .where('owner.id = :id', { id: user.id })
+      .getOne();
+
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found for this user');
+    }
+
+    if (!restaurant.owner || restaurant.owner.id !== user.id) {
+      // double-check safety (TS will stop complaining about possible null)
+      throw new ForbiddenException('Not allowed to add story to this restaurant');
+    }
+
+    // ======= upload file (auto-detect by mimetype) =======
+    let mediaUrl: string | undefined;
+    let thumbnailUrl: string | undefined;
+
+    if (file) {
+      if (file.mimetype.startsWith('video/')) {
+        const uploadResult = await this.cloudinaryService.uploadVideo(file, 'restaurants/stories');
+        mediaUrl = uploadResult.secure_url;
+        thumbnailUrl = this.cloudinaryService.generateThumbnail(uploadResult.public_id);
+      } else if (file.mimetype.startsWith('image/')) {
+        const uploadResult = await this.cloudinaryService.uploadImage(file, 'restaurants/stories');
+        mediaUrl = uploadResult.secure_url;
+      } else {
+        throw new BadRequestException('Unsupported file type');
+      }
+    }
+
+    // ======= create story: pass only restaurant id to satisfy DeepPartial typing =======
     const story = this.storyRepo.create({
-      ...dto,
-      mediaUrl: fileUrl,
+      text: dto.text,
+      mediaUrl,
       thumbnailUrl,
-      restaurant: user.restaurants[0],
+      restaurant: { id: restaurant.id }, // <-- important: partial object with id only
       expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
     });
 
     return this.storyRepo.save(story);
   }
 
-  async updateStory(user: User, id: string, dto: UpdateStoryDto) {
-    const story = await this.storyRepo.findOne({
-      where: { id },
-      relations: ['restaurant', 'restaurant.owner'],
-    });
-    if (!story) throw new NotFoundException('Story not found');
-    if (story.restaurant.owner.id !== user.id) {
-      throw new ForbiddenException('You are not the owner of this story');
-    }
-    Object.assign(story, dto);
-    return this.storyRepo.save(story);
+
+async updateStory(
+  user: User,
+  id: string,
+  dto: UpdateStoryDto,
+  fileUrl?: string,
+  thumbnailUrl?: string,
+) {
+  const story = await this.storyRepo.findOne({
+    where: { id },
+    relations: ['restaurant', 'restaurant.owner'],
+  });
+
+  if (!story) throw new NotFoundException('Story not found');
+  if (story.restaurant.owner.id !== user.id) {
+    throw new ForbiddenException('You are not the owner of this story');
   }
+
+  // تحديث النص إذا موجود
+  if (dto.text !== undefined) {
+    story.text = dto.text;
+  }
+
+  // تحديث الصورة أو الفيديو إذا انرفع ملف جديد
+  if (fileUrl) {
+    story.mediaUrl = fileUrl;
+  }
+
+  // تحديث الثمبنيل إذا موجود
+  if (thumbnailUrl) {
+    story.thumbnailUrl = thumbnailUrl;
+  }
+
+  return this.storyRepo.save(story);
+}
+
 
   async deleteStory(user: User, id: string) {
     const story = await this.storyRepo.findOne({

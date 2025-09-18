@@ -18,3 +18,13 @@ export class MyLikesResponseDto {
   })
   likes: Array<{ id: string; type: 'meal' | 'restaurant'; name: string }>;
 }
+
+export class MealLikeDto {
+  id: number;
+  name: string;
+}
+
+export class RestaurantLikeDto {
+  id: number;
+  name: string;
+}

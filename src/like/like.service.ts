@@ -2,7 +2,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like } from './like.entity';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { User } from 'src/user/user.entity';
 import { Meal } from 'src/meal/meal.entity';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
@@ -47,15 +47,34 @@ export class LikeService {
     return { isLiked: true, message: 'تم تسجيل الإعجاب بنجاح' };
   }
 
-  async getMyLikes(user: User) {
-    const likes = await this.likeRepo.find({ where: { user: { id: user.id } } });
+async getMealLikes(user: User) {
+  const likes = await this.likeRepo.find({
+    where: {
+      user: { id: user.id },
+      meal: { id: Not(IsNull()) },
+    },
+    relations: ['meal'],
+  });
+    return likes.map((like) => ({
+    id: like.meal.id,
+    name: like.meal.name,
+  }));
+}
 
-    return {
-      likes: likes.map((like) => ({
-        id: like.meal ? like.meal.id : like.restaurant.id,
-        type: like.meal ? 'meal' : 'restaurant',
-        name: like.meal ? like.meal.name : like.restaurant.name,
-      })),
-    };
-  }
+async getRestaurantLikes(user: User) {
+  const likes = await this.likeRepo.find({
+    where: {
+      user: { id: user.id },
+      restaurant: { id: Not(IsNull()) },
+    },
+    relations: ['restaurant'],
+  });
+
+  return likes.map((like) => ({
+    id: like.restaurant.id,
+    name: like.restaurant.name,
+  }));
+  
+}
+
 }

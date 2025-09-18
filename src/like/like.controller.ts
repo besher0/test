@@ -4,7 +4,7 @@ import { LikeService } from './like.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiOkResponse } from '@nestjs/swagger';
-import { ToggleLikeResponseDto, MyLikesResponseDto } from './like.dto';
+import { ToggleLikeResponseDto, MealLikeDto, RestaurantLikeDto } from './like.dto';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
 
@@ -35,8 +35,17 @@ export class LikeController {
   @UseGuards(JwtAuthGuard)
   @Get('my-likes')
   @ApiOperation({ summary: 'إرجاع قائمة الإعجابات الخاصة بالمستخدم' })
-  @ApiOkResponse({ type: MyLikesResponseDto })
+  @ApiOkResponse({ type: MealLikeDto })
   async getMyLikes(@CurrentUser() user: User) {
-    return this.likeService.getMyLikes(user);
+    return this.likeService.getMealLikes(user);
   }
+
+  @UseGuards(JwtAuthGuard)
+@Get('my-likes/restaurants')
+@ApiOperation({ summary: 'إرجاع قائمة إعجابات المطاعم الخاصة بالمستخدم' })
+@ApiOkResponse({ type: [RestaurantLikeDto] })
+async getRestaurantLikes(@CurrentUser() user: User) {
+  return this.likeService.getRestaurantLikes(user);
+}
+
 }

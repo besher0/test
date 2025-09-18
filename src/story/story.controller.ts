@@ -10,7 +10,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
-  ForbiddenException,
+  Put,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -27,46 +27,58 @@ import { ReactToStoryDto } from './dto/react-to-story.dto';
 export class StoryController {
   constructor(private readonly storyService: StoryService) {}
 
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Create a story (only restaurant owners)' })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: { type: 'string', format: 'binary' },
-        text: { type: 'string' },
-      },
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@ApiOperation({ summary: 'Create a story (only restaurant owners)' })
+@ApiConsumes('multipart/form-data')
+@ApiBody({
+  schema: {
+    type: 'object',
+    properties: {
+      file: { type: 'string', format: 'binary' },
+      text: { type: 'string' },
     },
-  })
-  @Post()
-  @UseInterceptors(FileInterceptor('file'))
-  async createStory(
-    @CurrentUser() user: User,
-    @Body() dto: CreateStoryDto,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    if (user.userType !== 'restaurant') {
-      throw new ForbiddenException('Only restaurant owners can create stories');
-    }
-    const fileUrl = file?.path;
-    const thumbnailUrl = file ? `thumbnail-of-${file.filename}` : undefined; // TODO: generate real thumbnail
-    return this.storyService.createStory(user, dto, fileUrl, thumbnailUrl);
-  }
+    required: ['file'],
+  },
+})
+@Post()
+@UseInterceptors(FileInterceptor('file'))
+async createStory(
+  @CurrentUser() user: User,
+  @Body() dto: CreateStoryDto,
+  @UploadedFile() file: Express.Multer.File,
+) {
+  return this.storyService.createStory(user, dto, file);
+}
 
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Update a story (only restaurant owners)' })
-  @ApiParam({ name: 'id', type: String, description: 'Story ID' })
-  @Patch(':id')
-  async updateStory(
-    @Param('id') id: string,
-    @CurrentUser() user: User,
-    @Body() dto: UpdateStoryDto,
-  ) {
-    return this.storyService.updateStory(user, id, dto);
-  }
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@ApiOperation({ summary: 'Update a story (only restaurant owners)' })
+@ApiParam({ name: 'id', type: String, description: 'Story ID' })
+@ApiConsumes('multipart/form-data')
+@ApiBody({
+  schema: {
+    type: 'object',
+    properties: {
+      file: { type: 'string', format: 'binary' },
+      text: { type: 'string' },
+    },
+  },
+})
+@Put(':id')
+@UseInterceptors(FileInterceptor('file'))
+async updateStory(
+  @Param('id') id: string,
+  @CurrentUser() user: User,
+  @Body() dto: UpdateStoryDto,
+  @UploadedFile() file?: Express.Multer.File,
+) {
+  const fileUrl = file?.path;
+  const thumbnailUrl = file ? `thumbnail-of-${file.filename}` : undefined;
+
+  return this.storyService.updateStory(user, id, dto, fileUrl, thumbnailUrl);
+}
+
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
