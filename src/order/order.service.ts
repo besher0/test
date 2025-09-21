@@ -1,14 +1,13 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from './order.entity';
 import { OrderItem } from './order-item.entity';
 import { CartService } from 'src/cart/cart.service';
+import { Meal } from 'src/meal/meal.entity';
+import { DeliveryLocation } from 'src/restaurant/delivery-location.entity';
 import { User } from 'src/user/user.entity';
+import { CreateOrderDto } from './dto/dto.create.order';
 
 @Injectable()
 export class OrderService {
@@ -16,35 +15,78 @@ export class OrderService {
     @InjectRepository(Order) private orderRepo: Repository<Order>,
     @InjectRepository(OrderItem) private orderItemRepo: Repository<OrderItem>,
     @InjectRepository(User) private userRepo: Repository<User>,
+    @InjectRepository(Meal) private mealRepo: Repository<Meal>,
+    @InjectRepository(DeliveryLocation)
+    private deliveryLocationRepo: Repository<DeliveryLocation>,
     private cartService: CartService,
   ) {}
 
-  async createOrder(userId: string): Promise<Order> {
+  async createOrder(userId: string, dto: CreateOrderDto): Promise<Order> {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
-    const cart = await this.cartService.getUserCart(userId);
-    if (!cart.items.length) throw new BadRequestException('Cart is empty');
-
+    // جلب عناصر الطلب من dto.items وجلب الكيانات الحقيقية
     let total = 0;
-    const items = cart.items.map((cartItem) => {
-      const orderItem = this.orderItemRepo.create({
-        meal: cartItem.meal,
-        quantity: cartItem.quantity,
-        price: Number(cartItem.meal.price) * cartItem.quantity,
+    const items: OrderItem[] = [];
+    if (!Array.isArray(dto.items)) {
+      throw new NotFoundException('Order items must be an array');
+    }
+    for (const itemDto of dto.items) {
+      if (
+        !itemDto ||
+        typeof itemDto.mealId !== 'string' ||
+        typeof itemDto.quantity !== 'number'
+      ) {
+        throw new NotFoundException('Invalid order item');
+      }
+      const meal = await this.mealRepo.findOne({
+        where: { id: itemDto.mealId },
       });
-      total += orderItem.price;
-      return orderItem;
-    });
+      if (!meal) throw new NotFoundException('Meal not found');
+      const price = meal.price * itemDto.quantity;
+      total += price;
+      const orderItem = this.orderItemRepo.create({
+        meal,
+        quantity: itemDto.quantity,
+        price,
+      });
+      items.push(orderItem);
+    }
+
+    // جلب موقع التسليم إذا كان PICKUP_POINT
+    let deliveryLocation: DeliveryLocation | undefined = undefined;
+    if (dto.deliveryType === 'PICKUP_POINT' && dto.deliveryLocationId) {
+      const foundLocation = await this.deliveryLocationRepo.findOne({
+        where: { id: dto.deliveryLocationId },
+      });
+      if (!foundLocation) {
+        throw new NotFoundException('Delivery location not found');
+      }
+      deliveryLocation = foundLocation;
+    }
+
+    // جلب المطعم من أول وجبة (يمكنك تعديله حسب منطقك)
+    const restaurant = items.length > 0 ? items[0].meal.restaurant : undefined;
+
+    // إحداثيات المستخدم إذا كان DELIVERY
+    const userLatitude =
+      dto.deliveryType === 'DELIVERY' ? dto.latitude : undefined;
+
+    const userLongitude =
+      dto.deliveryType === 'DELIVERY' ? dto.longitude : undefined;
 
     const order = this.orderRepo.create({
       user,
+      restaurant,
       items,
       totalPrice: total,
       status: 'PENDING',
+      deliveryType: dto.deliveryType,
+      deliveryLocation: deliveryLocation ?? undefined,
+      userLatitude,
+      userLongitude,
     });
 
-    await this.cartService.clearCart(userId);
     return this.orderRepo.save(order);
   }
 

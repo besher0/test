@@ -62,8 +62,8 @@ export class CartController {
       },
     },
   })
-  getCart(@CurrentUser() user: UserJwt) {
-    return this.cartService.getUserCart(user.sub);
+  getCart(@CurrentUser() user: User) {
+    return this.cartService.getUserCart(user.id);
   }
 
   @Post('add')
@@ -77,14 +77,14 @@ export class CartController {
   @Delete(':itemId')
   @ApiOperation({ summary: 'Delete (":itemId")'.trim() })
   @ApiResponse({ status: 200, description: 'Success' })
-  removeItem(@CurrentUser() user: UserJwt, @Param('itemId') itemId: string) {
-    return this.cartService.removeItem(user.sub, itemId);
+  removeItem(@CurrentUser() user: User, @Param('itemId') itemId: string) {
+    return this.cartService.removeItem(user.id, itemId);
   }
 
   @Delete()
   @ApiOperation({ summary: 'Delete ()'.trim() })
   @ApiResponse({ status: 200, description: 'Success' })
-  clearCart(@CurrentUser() user: UserJwt) {
-    return this.cartService.clearCart(user.sub);
+  clearCart(@CurrentUser() user: User) {
+    return this.cartService.clearCart(user.id);
   }
 }

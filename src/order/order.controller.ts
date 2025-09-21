@@ -3,6 +3,8 @@ import { OrderService } from './order.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { CreateOrderDto } from './dto/dto.create.order';
+import { User } from 'src/user/user.entity';
 
 type UserJwt = {
   sub: string;
@@ -19,15 +21,15 @@ export class OrderController {
   @Post()
   @ApiOperation({ summary: 'Post ()'.trim() })
   @ApiResponse({ status: 200, description: 'Success' })
-  createOrder(@CurrentUser() user: UserJwt) {
-    return this.orderService.createOrder(user.sub);
+  createOrder(@CurrentUser() user: User, dto: CreateOrderDto) {
+    return this.orderService.createOrder(user.id, dto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get ()'.trim() })
   @ApiResponse({ status: 200, description: 'Success' })
-  getUserOrders(@CurrentUser() user: UserJwt) {
-    return this.orderService.getOrders(user.sub);
+  getUserOrders(@CurrentUser() user: User) {
+    return this.orderService.getOrders(user.id);
   }
 
   @Post(':id/status')

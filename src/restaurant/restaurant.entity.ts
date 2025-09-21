@@ -21,6 +21,7 @@ import { RatingReply } from 'src/rating/rating-reply.entity';
 import { Country } from 'src/country/county.entity';
 import { RestaurantImage } from './restaurant-image.entity';
 import { RestaurantVideo } from './restaurant-video.entity';
+import { DeliveryLocation } from './delivery-location.entity';
 
 @Entity()
 export class Restaurant {
@@ -56,6 +57,11 @@ export class Restaurant {
   })
   @Column({ nullable: true })
   logo_url: string;
+
+  @OneToMany(() => DeliveryLocation, (location) => location.restaurant, {
+    cascade: true,
+  })
+  deliveryLocations: DeliveryLocation[];
 
   @ApiProperty({
     example: 'https://example.com/main-image.png',

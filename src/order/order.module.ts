@@ -7,10 +7,11 @@ import { OrderController } from './order.controller';
 import { User } from 'src/user/user.entity';
 import { CartModule } from 'src/cart/cart.module';
 import { Meal } from 'src/meal/meal.entity';
+import { DeliveryLocation } from 'src/restaurant/delivery-location.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Order, OrderItem, User, Meal]),
+    TypeOrmModule.forFeature([Order, OrderItem, User, Meal, DeliveryLocation]),
     CartModule,
   ],
   providers: [OrderService],
