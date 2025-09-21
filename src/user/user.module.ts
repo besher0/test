@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserController } from './user.controller';
@@ -11,10 +10,14 @@ import { JwtModule } from '@nestjs/jwt';
 import { Category } from 'src/category/category.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User,Cart,Order,Category]),forwardRef(() => AuthModule),    JwtModule.register({
-        secret: process.env.JWT_SECRET || 'your_jwt_secret',
-        signOptions: { expiresIn: '12h' },
-      }),],
+  imports: [
+    TypeOrmModule.forFeature([User, Cart, Order, Category]),
+    forwardRef(() => AuthModule),
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'your_jwt_secret',
+      signOptions: { expiresIn: '12h' },
+    }),
+  ],
   controllers: [UserController],
   providers: [UserService],
   exports: [UserService],

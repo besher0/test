@@ -1,5 +1,15 @@
-/* eslint-disable prettier/prettier */
-import { Controller, Post, Body, Get, Param, Put, Delete, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  Put,
+  Delete,
+  UseGuards,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { UpdateUserDto } from '../user/dto/update-user.dto';
@@ -7,7 +17,15 @@ import { AuthService } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorator/roles.decorator';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiUnauthorizedResponse, ApiForbiddenResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiBody,
+  ApiUnauthorizedResponse,
+  ApiForbiddenResponse,
+} from '@nestjs/swagger';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from './user.entity';
 import { LoginDto } from './dto/login-dto';
@@ -21,13 +39,13 @@ export class UserController {
   ) {}
 
   @Post('register')
-@ApiBody({ 
+  @ApiBody({
     type: CreateUserDto,
-    description: 'User registration data'
+    description: 'User registration data',
   })
   @ApiOperation({ summary: 'Register a new user' })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'User created successfully',
     schema: {
       example: {
@@ -37,11 +55,11 @@ export class UserController {
         email: 'john.doe@example.com',
         userType: 'normalUser',
         // ... other fields as per DTO
-      }
-    }
+      },
+    },
   })
-  @ApiResponse({ 
-    status: 400, 
+  @ApiResponse({
+    status: 400,
     description: 'Bad Request if validation fails',
     schema: {
       example: {
@@ -51,8 +69,8 @@ export class UserController {
       },
     },
   })
-  @ApiResponse({ 
-    status: 409, 
+  @ApiResponse({
+    status: 409,
     description: 'Conflict if email already exists',
     schema: {
       example: {
@@ -67,19 +85,20 @@ export class UserController {
   }
 
   @Post('login')
-@ApiOperation({ summary: 'Login a user' })
+  @ApiOperation({ summary: 'Login a user' })
   @ApiBody({ type: LoginDto })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Returns JWT token upon successful login',
     schema: {
       example: {
-        access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
+        access_token:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
       },
     },
   })
-  @ApiResponse({ 
-    status: 401, 
+  @ApiResponse({
+    status: 401,
     description: 'Unauthorized if email or password is incorrect',
     schema: {
       example: {
@@ -89,13 +108,16 @@ export class UserController {
       },
     },
   })
-  @ApiResponse({ 
-    status: 400, 
+  @ApiResponse({
+    status: 400,
     description: 'Bad Request if input validation fails',
     schema: {
       example: {
         statusCode: 400,
-        message: ['Email must be valid', 'Password must be at least 6 characters long'],
+        message: [
+          'Email must be valid',
+          'Password must be at least 6 characters long',
+        ],
         error: 'Bad Request',
       },
     },
@@ -105,12 +127,12 @@ export class UserController {
   }
 
   @Get()
-@UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all users' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'List of users',
     schema: {
       example: [
@@ -121,9 +143,9 @@ export class UserController {
           email: 'john.doe@example.com',
           userType: 'normalUser',
           // ... other fields
-        }
-      ]
-    }
+        },
+      ],
+    },
   })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   @ApiForbiddenResponse({ description: 'Forbidden - Admin role required' })
@@ -132,11 +154,11 @@ export class UserController {
   }
 
   @Get(':id')
-@UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a user by ID' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'User details',
     schema: {
       example: {
@@ -146,11 +168,11 @@ export class UserController {
         email: 'john.doe@example.com',
         userType: 'normalUser',
         // ... other fields
-      }
-    }
+      },
+    },
   })
-  @ApiResponse({ 
-    status: 404, 
+  @ApiResponse({
+    status: 404,
     description: 'User not found',
     schema: {
       example: {
@@ -166,15 +188,15 @@ export class UserController {
   }
 
   @Put(':id')
-@UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a user' })
-  @ApiBody({ 
+  @ApiBody({
     type: UpdateUserDto,
-    description: 'User update data'
+    description: 'User update data',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Updated user',
     schema: {
       example: {
@@ -184,11 +206,11 @@ export class UserController {
         email: 'jane.smith@updated.com',
         userType: 'admin',
         // ... other updated fields
-      }
-    }
+      },
+    },
   })
-  @ApiResponse({ 
-    status: 404, 
+  @ApiResponse({
+    status: 404,
     description: 'User not found',
     schema: {
       example: {
@@ -198,7 +220,7 @@ export class UserController {
       },
     },
   })
-  @ApiForbiddenResponse({ 
+  @ApiForbiddenResponse({
     description: 'Forbidden - Not authorized to update this user',
     schema: {
       example: {
@@ -209,30 +231,37 @@ export class UserController {
     },
   })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto  , @CurrentUser() currentUser: User,) {
-     if (currentUser.id !== id && currentUser.userType !== 'admin') {
-      throw new HttpException('غير مصرح لك بتحديث هذا المستخدم', HttpStatus.FORBIDDEN);
+  update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @CurrentUser() currentUser: User,
+  ) {
+    if (currentUser.id !== id && currentUser.userType !== 'admin') {
+      throw new HttpException(
+        'غير مصرح لك بتحديث هذا المستخدم',
+        HttpStatus.FORBIDDEN,
+      );
     }
     return this.userService.update(id, updateUserDto);
   }
 
   @Delete(':id')
-@UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a user' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'User deleted successfully',
     schema: {
       example: {
         message: 'User deleted successfully',
         id: '11111111-1111-4111-8111-111111111111',
-      }
-    }
+      },
+    },
   })
-  @ApiResponse({ 
-    status: 404, 
+  @ApiResponse({
+    status: 404,
     description: 'User not found',
     schema: {
       example: {
@@ -242,7 +271,7 @@ export class UserController {
       },
     },
   })
-  @ApiForbiddenResponse({ 
+  @ApiForbiddenResponse({
     description: 'Forbidden - Not authorized to delete this user',
     schema: {
       example: {
@@ -253,10 +282,12 @@ export class UserController {
     },
   })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
-  remove(@Param('id') id: string,    @CurrentUser() currentUser: User,
-) {
-     if (currentUser.id !== id && currentUser.userType !== 'admin') {
-      throw new HttpException('غير مصرح لك بحذف هذا المستخدم', HttpStatus.FORBIDDEN);
+  remove(@Param('id') id: string, @CurrentUser() currentUser: User) {
+    if (currentUser.id !== id && currentUser.userType !== 'admin') {
+      throw new HttpException(
+        'غير مصرح لك بحذف هذا المستخدم',
+        HttpStatus.FORBIDDEN,
+      );
     }
     return this.userService.remove(id);
   }

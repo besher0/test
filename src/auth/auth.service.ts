@@ -1,7 +1,11 @@
-/* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { forwardRef, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import { CreateUserDto } from '../user/dto/create-user.dto';
@@ -24,21 +28,19 @@ export class AuthService {
     const payload = { id: user.id, email: user.email, userType: user.userType };
     return {
       access_token: this.jwtService.sign(payload),
-    user: user,
-
+      user: user,
     };
   }
 
-  async register(createUserDto: CreateUserDto){
+  async register(createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
   }
 
   async validateToken(token: string): Promise<any> {
-  try {
-    return await this.jwtService.verify(token); // بيرجع الـ payload
-  } catch (error) {
-    return error;
+    try {
+      return await this.jwtService.verify(token); // بيرجع الـ payload
+    } catch (error) {
+      return error;
+    }
   }
-}
-
 }

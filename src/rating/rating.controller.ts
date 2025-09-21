@@ -1,13 +1,27 @@
-/* eslint-disable prettier/prettier */
-import { Controller, Post, Param, Body, UseGuards, Get, UseInterceptors, UploadedFile } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Param,
+  Body,
+  UseGuards,
+  Get,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiBearerAuth,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { RatingService } from './rating.service';
 import { Rating } from './rating.entity';
 import { RatingReply } from './rating-reply.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
-import {  CreateRatingWithImageDto } from './dto/create-rating.dto';
+import { CreateRatingWithImageDto } from './dto/create-rating.dto';
 import { CreateReplyDto } from './dto/rating-reply.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 
@@ -21,7 +35,9 @@ export class RatingController {
   @Post('restaurant/:restaurantId')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Add rating to a restaurant (with optional image upload)' })
+  @ApiOperation({
+    summary: 'Add rating to a restaurant (with optional image upload)',
+  })
   @ApiResponse({ status: 201, type: Rating })
   async addRating(
     @Param('restaurantId') restaurantId: string,
@@ -29,11 +45,16 @@ export class RatingController {
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: User,
   ): Promise<Rating> {
-    return await this.ratingService.addRatingWithImage(user, restaurantId, dto, file);
+    return await this.ratingService.addRatingWithImage(
+      user,
+      restaurantId,
+      dto,
+      file,
+    );
   }
 
   // 2️⃣ الرد على تقييم (صاحب المطعم فقط)
-@UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post(':id/reply')
   @ApiOperation({ summary: 'Reply to a rating (only restaurant owner)' })
@@ -43,14 +64,20 @@ export class RatingController {
     @Body() createReplyDto: CreateReplyDto,
     @CurrentUser() user: User,
   ): Promise<RatingReply> {
-    return this.ratingService.addReply(ratingId, user, createReplyDto.replyText);
+    return this.ratingService.addReply(
+      ratingId,
+      user,
+      createReplyDto.replyText,
+    );
   }
 
   // 3️⃣ جلب تقييمات مطعم
   @Get('restaurant/:restaurantId')
   @ApiOperation({ summary: 'Get all ratings of a restaurant' })
   @ApiResponse({ status: 200, type: [Rating] })
-  async getRestaurantRatings(@Param('restaurantId') restaurantId: string): Promise<Rating[]> {
+  async getRestaurantRatings(
+    @Param('restaurantId') restaurantId: string,
+  ): Promise<Rating[]> {
     return this.ratingService.getRestaurantRatings(restaurantId);
   }
 }

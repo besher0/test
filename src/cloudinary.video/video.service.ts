@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 // src/video/video.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';

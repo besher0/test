@@ -1,5 +1,9 @@
-/* eslint-disable prettier/prettier */
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException,  } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { Story } from './story.entity';
@@ -17,11 +21,15 @@ export class StoryService {
     @InjectRepository(Reaction) private reactionRepo: Repository<Reaction>,
     private readonly cloudinaryService: CloudinaryService,
 
-      @InjectRepository(Restaurant)
- private readonly restaurantRepo:Repository<Restaurant>
+    @InjectRepository(Restaurant)
+    private readonly restaurantRepo: Repository<Restaurant>,
   ) {}
 
-async createStory(user: User, dto: CreateStoryDto, file?: Express.Multer.File) {
+  async createStory(
+    user: User,
+    dto: CreateStoryDto,
+    file?: Express.Multer.File,
+  ) {
     if (user.userType !== 'restaurant') {
       throw new ForbiddenException('Only restaurant owners can create stories');
     }
@@ -39,7 +47,9 @@ async createStory(user: User, dto: CreateStoryDto, file?: Express.Multer.File) {
 
     if (!restaurant.owner || restaurant.owner.id !== user.id) {
       // double-check safety (TS will stop complaining about possible null)
-      throw new ForbiddenException('Not allowed to add story to this restaurant');
+      throw new ForbiddenException(
+        'Not allowed to add story to this restaurant',
+      );
     }
 
     // ======= upload file (auto-detect by mimetype) =======
@@ -48,11 +58,19 @@ async createStory(user: User, dto: CreateStoryDto, file?: Express.Multer.File) {
 
     if (file) {
       if (file.mimetype.startsWith('video/')) {
-        const uploadResult = await this.cloudinaryService.uploadVideo(file, 'restaurants/stories');
+        const uploadResult = await this.cloudinaryService.uploadVideo(
+          file,
+          'restaurants/stories',
+        );
         mediaUrl = uploadResult.secure_url;
-        thumbnailUrl = this.cloudinaryService.generateThumbnail(uploadResult.public_id);
+        thumbnailUrl = this.cloudinaryService.generateThumbnail(
+          uploadResult.public_id,
+        );
       } else if (file.mimetype.startsWith('image/')) {
-        const uploadResult = await this.cloudinaryService.uploadImage(file, 'restaurants/stories');
+        const uploadResult = await this.cloudinaryService.uploadImage(
+          file,
+          'restaurants/stories',
+        );
         mediaUrl = uploadResult.secure_url;
       } else {
         throw new BadRequestException('Unsupported file type');
@@ -71,42 +89,40 @@ async createStory(user: User, dto: CreateStoryDto, file?: Express.Multer.File) {
     return this.storyRepo.save(story);
   }
 
+  async updateStory(
+    user: User,
+    id: string,
+    dto: UpdateStoryDto,
+    fileUrl?: string,
+    thumbnailUrl?: string,
+  ) {
+    const story = await this.storyRepo.findOne({
+      where: { id },
+      relations: ['restaurant', 'restaurant.owner'],
+    });
 
-async updateStory(
-  user: User,
-  id: string,
-  dto: UpdateStoryDto,
-  fileUrl?: string,
-  thumbnailUrl?: string,
-) {
-  const story = await this.storyRepo.findOne({
-    where: { id },
-    relations: ['restaurant', 'restaurant.owner'],
-  });
+    if (!story) throw new NotFoundException('Story not found');
+    if (story.restaurant.owner.id !== user.id) {
+      throw new ForbiddenException('You are not the owner of this story');
+    }
 
-  if (!story) throw new NotFoundException('Story not found');
-  if (story.restaurant.owner.id !== user.id) {
-    throw new ForbiddenException('You are not the owner of this story');
+    // تحديث النص إذا موجود
+    if (dto.text !== undefined) {
+      story.text = dto.text;
+    }
+
+    // تحديث الصورة أو الفيديو إذا انرفع ملف جديد
+    if (fileUrl) {
+      story.mediaUrl = fileUrl;
+    }
+
+    // تحديث الثمبنيل إذا موجود
+    if (thumbnailUrl) {
+      story.thumbnailUrl = thumbnailUrl;
+    }
+
+    return this.storyRepo.save(story);
   }
-
-  // تحديث النص إذا موجود
-  if (dto.text !== undefined) {
-    story.text = dto.text;
-  }
-
-  // تحديث الصورة أو الفيديو إذا انرفع ملف جديد
-  if (fileUrl) {
-    story.mediaUrl = fileUrl;
-  }
-
-  // تحديث الثمبنيل إذا موجود
-  if (thumbnailUrl) {
-    story.thumbnailUrl = thumbnailUrl;
-  }
-
-  return this.storyRepo.save(story);
-}
-
 
   async deleteStory(user: User, id: string) {
     const story = await this.storyRepo.findOne({
@@ -120,7 +136,11 @@ async updateStory(
     return this.storyRepo.remove(story);
   }
 
-  async reactToStory(user: User, storyId: string, type: 'like' | 'love' | 'fire') {
+  async reactToStory(
+    user: User,
+    storyId: string,
+    type: 'like' | 'love' | 'fire',
+  ) {
     const story = await this.storyRepo.findOne({ where: { id: storyId } });
     if (!story) throw new NotFoundException('Story not found');
 
@@ -142,7 +162,12 @@ async updateStory(
 
     const stories = await this.storyRepo.find({
       where: { expiresAt: MoreThan(now) },
-      relations: ['restaurant', 'restaurant.owner', 'reactions', 'reactions.user'],
+      relations: [
+        'restaurant',
+        'restaurant.owner',
+        'reactions',
+        'reactions.user',
+      ],
       order: { createdAt: 'DESC' },
     });
 

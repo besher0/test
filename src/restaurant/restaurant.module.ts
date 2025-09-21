@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Restaurant } from './restaurant.entity';
@@ -17,8 +16,22 @@ import { Follow } from 'src/follow/follow.entity';
 import { FilterService } from './filter.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Restaurant, User, Category,Country,Rating,Meal,RestaurantImage,RestaurantVideo,Follow]),CloudinaryModule,CountryModule],
-  providers: [RestaurantService,FilterService],
+  imports: [
+    TypeOrmModule.forFeature([
+      Restaurant,
+      User,
+      Category,
+      Country,
+      Rating,
+      Meal,
+      RestaurantImage,
+      RestaurantVideo,
+      Follow,
+    ]),
+    CloudinaryModule,
+    CountryModule,
+  ],
+  providers: [RestaurantService, FilterService],
   controllers: [RestaurantController],
   exports: [RestaurantService],
 })

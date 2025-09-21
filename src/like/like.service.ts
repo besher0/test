@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like } from './like.entity';
@@ -19,7 +18,9 @@ export class LikeService {
     const meal = await this.mealRepo.findOne({ where: { id: mealId } });
     if (!meal) throw new NotFoundException('Meal not found');
 
-    let like = await this.likeRepo.findOne({ where: { user: { id: user.id }, meal: { id: meal.id } } });
+    let like = await this.likeRepo.findOne({
+      where: { user: { id: user.id }, meal: { id: meal.id } },
+    });
 
     if (like) {
       await this.likeRepo.remove(like);
@@ -32,10 +33,14 @@ export class LikeService {
   }
 
   async toggleRestaurantLike(user: User, restaurantId: string) {
-    const restaurant = await this.restRepo.findOne({ where: { id: restaurantId } });
+    const restaurant = await this.restRepo.findOne({
+      where: { id: restaurantId },
+    });
     if (!restaurant) throw new NotFoundException('Restaurant not found');
 
-    let like = await this.likeRepo.findOne({ where: { user: { id: user.id }, restaurant: { id: restaurant.id } } });
+    let like = await this.likeRepo.findOne({
+      where: { user: { id: user.id }, restaurant: { id: restaurant.id } },
+    });
 
     if (like) {
       await this.likeRepo.remove(like);
@@ -47,34 +52,32 @@ export class LikeService {
     return { isLiked: true, message: 'تم تسجيل الإعجاب بنجاح' };
   }
 
-async getMealLikes(user: User) {
-  const likes = await this.likeRepo.find({
-    where: {
-      user: { id: user.id },
-      meal: { id: Not(IsNull()) },
-    },
-    relations: ['meal'],
-  });
+  async getMealLikes(user: User) {
+    const likes = await this.likeRepo.find({
+      where: {
+        user: { id: user.id },
+        meal: { id: Not(IsNull()) },
+      },
+      relations: ['meal'],
+    });
     return likes.map((like) => ({
-    id: like.meal.id,
-    name: like.meal.name,
-  }));
-}
+      id: like.meal.id,
+      name: like.meal.name,
+    }));
+  }
 
-async getRestaurantLikes(user: User) {
-  const likes = await this.likeRepo.find({
-    where: {
-      user: { id: user.id },
-      restaurant: { id: Not(IsNull()) },
-    },
-    relations: ['restaurant'],
-  });
+  async getRestaurantLikes(user: User) {
+    const likes = await this.likeRepo.find({
+      where: {
+        user: { id: user.id },
+        restaurant: { id: Not(IsNull()) },
+      },
+      relations: ['restaurant'],
+    });
 
-  return likes.map((like) => ({
-    id: like.restaurant.id,
-    name: like.restaurant.name,
-  }));
-  
-}
-
+    return likes.map((like) => ({
+      id: like.restaurant.id,
+      name: like.restaurant.name,
+    }));
+  }
 }

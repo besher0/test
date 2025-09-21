@@ -1,12 +1,18 @@
-/* eslint-disable prettier/prettier */
 import { Injectable, Inject } from '@nestjs/common';
-import { v2 as Cloudinary, UploadApiResponse, UploadApiErrorResponse } from 'cloudinary';
+import {
+  v2 as Cloudinary,
+  UploadApiResponse,
+  UploadApiErrorResponse,
+} from 'cloudinary';
 
 @Injectable()
 export class CloudinaryService {
   constructor(@Inject('CLOUDINARY') private cloudinary: typeof Cloudinary) {}
 
-  async uploadImage(file: Express.Multer.File, folder: string): Promise<UploadApiResponse> {
+  async uploadImage(
+    file: Express.Multer.File,
+    folder: string,
+  ): Promise<UploadApiResponse> {
     return new Promise((resolve, reject) => {
       const uploadStream = this.cloudinary.uploader.upload_stream(
         {
@@ -25,7 +31,10 @@ export class CloudinaryService {
     });
   }
 
-  async uploadVideo(file: Express.Multer.File, folder: string): Promise<UploadApiResponse> {
+  async uploadVideo(
+    file: Express.Multer.File,
+    folder: string,
+  ): Promise<UploadApiResponse> {
     return new Promise((resolve, reject) => {
       const uploadStream = this.cloudinary.uploader.upload_stream(
         {
@@ -43,7 +52,7 @@ export class CloudinaryService {
     });
   }
 
-    generateThumbnail(publicId: string): string {
+  generateThumbnail(publicId: string): string {
     return this.cloudinary.url(publicId, {
       resource_type: 'video',
       format: 'jpg',

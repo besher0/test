@@ -1,11 +1,28 @@
-/* eslint-disable prettier/prettier */
-import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Put,
+  UseGuards,
+  Req,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { MealService } from './meal.service';
 import { CreateMealDto } from './dto/create-meal.dto';
 import { UpdateMealDto } from './dto/update-meal.dto';
 import { Meal } from './meal.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('meals')
@@ -25,7 +42,7 @@ export class MealController {
   @Post()
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
-    //@ApiBody({ type: CreateMealDto })
+  //@ApiBody({ type: CreateMealDto })
   @ApiOperation({ summary: 'Create meal with optional image' })
   @ApiResponse({ status: 201, description: 'Meal created' })
   @UseInterceptors(FileInterceptor('image'))
@@ -37,8 +54,8 @@ export class MealController {
         description: { type: 'string' },
         restaurantId: { type: 'string' },
         categoryId: { type: 'string' },
-        price:{type:'number'},
-        preparationTime:{type:'string'},
+        price: { type: 'number' },
+        preparationTime: { type: 'string' },
         countryId: { type: 'string' },
         image: {
           type: 'string',
@@ -54,7 +71,6 @@ export class MealController {
     return this.mealService.create(dto, file);
   }
 
-
   @Get()
   @ApiOperation({ summary: 'Get ()'.trim() })
   @ApiResponse({ status: 200, description: 'Success' })
@@ -68,7 +84,6 @@ export class MealController {
   findOne(@Param('id') id: string) {
     return this.mealService.findOne(id);
   }
-
 
   @UseGuards(JwtAuthGuard)
   @Put(':id')
@@ -85,8 +100,8 @@ export class MealController {
         description: { type: 'string' },
         restaurantId: { type: 'string' },
         categoryId: { type: 'string' },
-        price:{type:'number'},
-        preparationTime:{type:'string'},
+        price: { type: 'number' },
+        preparationTime: { type: 'string' },
         countryId: { type: 'string' },
         image: {
           type: 'string',

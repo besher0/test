@@ -1,8 +1,6 @@
-/* eslint-disable prettier/prettier */
 import {
   Controller,
   Post,
-  Patch,
   Delete,
   Get,
   Body,
@@ -12,7 +10,14 @@ import {
   UseInterceptors,
   Put,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
@@ -27,74 +32,72 @@ import { ReactToStoryDto } from './dto/react-to-story.dto';
 export class StoryController {
   constructor(private readonly storyService: StoryService) {}
 
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
-@ApiOperation({ summary: 'Create a story (only restaurant owners)' })
-@ApiConsumes('multipart/form-data')
-@ApiBody({
-  schema: {
-    type: 'object',
-    properties: {
-      file: { type: 'string', format: 'binary' },
-      text: { type: 'string' },
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Create a story (only restaurant owners)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        text: { type: 'string' },
+      },
+      required: ['file'],
     },
-    required: ['file'],
-  },
-})
-@Post()
-@UseInterceptors(FileInterceptor('file'))
-async createStory(
-  @CurrentUser() user: User,
-  @Body() dto: CreateStoryDto,
-  @UploadedFile() file: Express.Multer.File,
-) {
-  return this.storyService.createStory(user, dto, file);
-}
+  })
+  @Post()
+  @UseInterceptors(FileInterceptor('file'))
+  async createStory(
+    @CurrentUser() user: User,
+    @Body() dto: CreateStoryDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.storyService.createStory(user, dto, file);
+  }
 
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
-@ApiOperation({ summary: 'Update a story (only restaurant owners)' })
-@ApiParam({ name: 'id', type: String, description: 'Story ID' })
-@ApiConsumes('multipart/form-data')
-@ApiBody({
-  schema: {
-    type: 'object',
-    properties: {
-      file: { type: 'string', format: 'binary' },
-      text: { type: 'string' },
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update a story (only restaurant owners)' })
+  @ApiParam({ name: 'id', type: String, description: 'Story ID' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        text: { type: 'string' },
+      },
     },
-  },
-})
-@Put(':id')
-@UseInterceptors(FileInterceptor('file'))
-async updateStory(
-  @Param('id') id: string,
-  @CurrentUser() user: User,
-  @Body() dto: UpdateStoryDto,
-  @UploadedFile() file?: Express.Multer.File,
-) {
-  const fileUrl = file?.path;
-  const thumbnailUrl = file ? `thumbnail-of-${file.filename}` : undefined;
+  })
+  @Put(':id')
+  @UseInterceptors(FileInterceptor('file'))
+  async updateStory(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @Body() dto: UpdateStoryDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const fileUrl = file?.path;
+    const thumbnailUrl = file ? `thumbnail-of-${file.filename}` : undefined;
 
-  return this.storyService.updateStory(user, id, dto, fileUrl, thumbnailUrl);
-}
-
+    return this.storyService.updateStory(user, id, dto, fileUrl, thumbnailUrl);
+  }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Delete a story (only restaurant owners)' })
   @ApiParam({ name: 'id', type: String, description: 'Story ID' })
   @Delete(':id')
-  async deleteStory(
-    @Param('id') id: string,
-    @CurrentUser() user: User,
-  ) {
+  async deleteStory(@Param('id') id: string, @CurrentUser() user: User) {
     return this.storyService.deleteStory(user, id);
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get stories from followed restaurants (48h expiry)' })
+  @ApiOperation({
+    summary: 'Get stories from followed restaurants (48h expiry)',
+  })
   @Get()
   async getStories(@CurrentUser() user: User) {
     return this.storyService.getStoriesForUser(user.id);

@@ -1,6 +1,5 @@
-/* eslint-disable prettier/prettier */
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import { Restaurant } from "./restaurant.entity";
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Restaurant } from './restaurant.entity';
 
 @Entity('restaurant_videos')
 export class RestaurantVideo {

@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
@@ -15,14 +14,13 @@ import { JwtService } from '@nestjs/jwt';
 export class UserService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
-    @InjectRepository(Category) private readonly categoryRepository: Repository<Category>,
+    @InjectRepository(Category)
+    private readonly categoryRepository: Repository<Category>,
     private readonly jwtService: JwtService,
   ) {}
 
   // تسجيل مستخدم جديد
-  async create(
-    createUserDto: CreateUserDto,
-  ){
+  async create(createUserDto: CreateUserDto) {
     // تحقق من تطابق الباسورد
     if (createUserDto.password !== createUserDto.confirmPassword) {
       throw new HttpException('Passwords do not match', HttpStatus.BAD_REQUEST);
@@ -58,13 +56,17 @@ export class UserService {
       userType: createUserDto.userType || 'normalUser',
       favoriteFood: favoriteCategory ?? undefined,
     });
-console.log('DTO userType:', createUserDto.userType);
+    console.log('DTO userType:', createUserDto.userType);
 
     const savedUser = await this.userRepository.save(user);
-console.log('Saved userType:', savedUser.userType);
+    console.log('Saved userType:', savedUser.userType);
 
     // إنشاء توكن JWT
-    const payload = { id: savedUser.id, email: savedUser.email, userType: savedUser.userType };
+    const payload = {
+      id: savedUser.id,
+      email: savedUser.email,
+      userType: savedUser.userType,
+    };
     const accessToken = this.jwtService.sign(payload);
 
     return { user: savedUser, accessToken };
@@ -85,10 +87,10 @@ console.log('Saved userType:', savedUser.userType);
   }
 
   async findAll(): Promise<User[]> {
-  return this.userRepository.find({
-    relations: ['favoriteFood'], // إذا بدك تجيب الأكلة المفضلة كمان
-  });
-}
+    return this.userRepository.find({
+      relations: ['favoriteFood'], // إذا بدك تجيب الأكلة المفضلة كمان
+    });
+  }
 
   // إحضار مستخدم حسب Email
   async findByEmail(email: string) {
@@ -101,7 +103,10 @@ console.log('Saved userType:', savedUser.userType);
 
     if (updateData.password && updateData.confirmPassword) {
       if (updateData.password !== updateData.confirmPassword) {
-        throw new HttpException('Passwords do not match', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Passwords do not match',
+          HttpStatus.BAD_REQUEST,
+        );
       }
       user.password = await bcrypt.hash(updateData.password, 10);
     }

@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,35 +13,40 @@ export class CountryService {
     @InjectRepository(Country)
     private readonly countryRepo: Repository<Country>,
     private readonly cloudinaryService: CloudinaryService,
-
   ) {}
 
- async create(dto: CreateCountryDto, imageFile?: Express.Multer.File,logoFile?: Express.Multer.File){
+  async create(
+    dto: CreateCountryDto,
+    imageFile?: Express.Multer.File,
+    logoFile?: Express.Multer.File,
+  ) {
     let imageUrl: string | null = null;
     let logoUrl: string | null = null;
     if (imageFile) {
-      const result: UploadApiResponse = await this.cloudinaryService.uploadImage(
-        imageFile,
-        'countries', // 📂 مجلد Cloudinary
-      );
-        console.log('Uploaded image:', result.secure_url); // ✅ تأكد
+      const result: UploadApiResponse =
+        await this.cloudinaryService.uploadImage(
+          imageFile,
+          'countries', // 📂 مجلد Cloudinary
+        );
+      console.log('Uploaded image:', result.secure_url); // ✅ تأكد
 
       imageUrl = result.secure_url;
     }
-        if (logoFile) {
-      const result: UploadApiResponse = await this.cloudinaryService.uploadImage(
-        logoFile,
-        'countries', // 📂 مجلد Cloudinary
-      );
-        console.log('Uploaded logo:', result.secure_url); // ✅ تأكد
+    if (logoFile) {
+      const result: UploadApiResponse =
+        await this.cloudinaryService.uploadImage(
+          logoFile,
+          'countries', // 📂 مجلد Cloudinary
+        );
+      console.log('Uploaded logo:', result.secure_url); // ✅ تأكد
 
       logoUrl = result.secure_url;
     }
 
     const country = this.countryRepo.create({
-      name: dto.name,     
+      name: dto.name,
       imageUrl: imageUrl,
-      logoImage:logoUrl,
+      logoImage: logoUrl,
     });
 
     return await this.countryRepo.save(country);

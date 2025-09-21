@@ -1,29 +1,28 @@
-/* eslint-disable prettier/prettier */
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateRestaurantDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Restaurant name',
-    example: 'Italiano Pizza'
+    example: 'Italiano Pizza',
   })
   @IsNotEmpty()
   @IsString()
   name?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Restaurant location',
     required: false,
-    example: '123 Main Street, New York'  
+    example: '123 Main Street, New York',
   })
   @IsOptional()
   @IsString()
   location?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Restaurant identity code',
     required: false,
-    example: 'RESTAURANT-12345' 
+    example: 'RESTAURANT-12345',
   })
   @IsOptional()
   @IsString()
@@ -35,10 +34,10 @@ export class CreateRestaurantDto {
   @ApiPropertyOptional({ example: 'من الساعة 12 ظهراً إلى 9 مساءً' })
   workingHours?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Logo URL',
     required: false,
-    example: 'https://example.com/logo.png' 
+    example: 'https://example.com/logo.png',
   })
   @IsOptional()
   @IsString()

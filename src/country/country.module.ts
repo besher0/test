@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Country } from './county.entity';
@@ -7,9 +6,9 @@ import { CountryController } from './country.controller';
 import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Country]),CloudinaryModule],
+  imports: [TypeOrmModule.forFeature([Country]), CloudinaryModule],
   providers: [CountryService],
   controllers: [CountryController],
-  exports: [CountryService,TypeOrmModule],
+  exports: [CountryService, TypeOrmModule],
 })
 export class CountryModule {}

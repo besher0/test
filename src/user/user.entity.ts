@@ -1,8 +1,15 @@
-/* eslint-disable prettier/prettier */
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne, JoinColumn, ManyToOne,  } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  OneToOne,
+  JoinColumn,
+  ManyToOne,
+} from 'typeorm';
 import { Category } from '../category/category.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import {  ValidateIf } from 'class-validator';
+import { ValidateIf } from 'class-validator';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { Cart } from 'src/cart/cart.entity';
 import { Order } from 'src/order/order.entity';
@@ -12,32 +19,34 @@ import { Reaction } from 'src/story/reaction.entity';
 import { Follow } from 'src/follow/follow.entity';
 import { Like } from 'src/like/like.entity';
 
-
 @Entity('user')
 export class User {
-  @ApiProperty({ example: "11111111-1111-4111-8111-111111111111" })
+  @ApiProperty({ example: '11111111-1111-4111-8111-111111111111' })
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ApiProperty({ example: "John" })
+  @ApiProperty({ example: 'John' })
   @Column()
   firstName: string;
 
-  @ApiProperty({ example: "Doe" })
+  @ApiProperty({ example: 'Doe' })
   @Column()
   lastName: string;
 
-  @ApiProperty({ example: "2025-09-13T10:00:00.000Z" })
+  @ApiProperty({ example: '2025-09-13T10:00:00.000Z' })
   @Column({ type: 'date' })
   birthDate: Date;
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   @ValidateIf((o) => o.userType === 'normalUser')
-  @ManyToOne(() => Category, category => category.user, { nullable: true, eager: true })
+  @ManyToOne(() => Category, (category) => category.user, {
+    nullable: true,
+    eager: true,
+  })
   @JoinColumn({ name: 'favoriteFood' })
   favoriteFood: Category;
 
-  @ApiProperty({ example: "normalUser" })
+  @ApiProperty({ example: 'normalUser' })
   @Column({
     type: 'enum',
     enum: ['normalUser', 'admin', 'restaurant', 'store'],
@@ -45,14 +54,14 @@ export class User {
   })
   userType: string;
 
-  @ApiProperty({ example: "male" })
+  @ApiProperty({ example: 'male' })
   @Column({
     type: 'enum',
     enum: ['male', 'female'],
   })
   gender: string;
 
-  @ApiProperty({ example: "john.doe@example.com" })
+  @ApiProperty({ example: 'john.doe@example.com' })
   @Column({ unique: true })
   email: string;
 
@@ -79,7 +88,7 @@ export class User {
   @ApiProperty()
   @OneToMany(() => Order, (order) => order.user)
   orders: Order[];
-  
+
   @ApiProperty()
   @OneToMany(() => Rating, (rating) => rating.user)
   ratings: Rating[];

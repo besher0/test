@@ -1,5 +1,3 @@
-/* eslint-disable prettier/prettier */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { HomeService } from './home.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';

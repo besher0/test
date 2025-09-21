@@ -1,8 +1,15 @@
-/* eslint-disable prettier/prettier */
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+} from 'typeorm';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { Category } from 'src/category/category.entity';
-import { Country } from 'src/country/county.entity';   // 👈 أضفنا الاستيراد
+import { Country } from 'src/country/county.entity'; // 👈 أضفنا الاستيراد
 import { ApiProperty } from '@nestjs/swagger';
 import { Like } from 'src/like/like.entity';
 
@@ -20,7 +27,7 @@ export class Meal {
   @Column({ nullable: true })
   description: string;
 
-  @Column({ type: 'float', default: 0 , nullable: true})
+  @Column({ type: 'float', default: 0, nullable: true })
   price: number;
 
   @ApiProperty({ required: false })
@@ -31,18 +38,26 @@ export class Meal {
   @Column({ nullable: true })
   preparationTime: string; // ⏱️ وقت التحضير
 
-  @ManyToOne(() => Restaurant, (restaurant) => restaurant.meals, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Restaurant, (restaurant) => restaurant.meals, {
+    onDelete: 'CASCADE',
+  })
   restaurant: Restaurant;
 
-  @ManyToOne(() => Category, (category) => category.meals, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => Category, (category) => category.meals, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   category?: Category;
 
-  @ManyToOne(() => Country, (country) => country.meals, { nullable: true, onDelete: 'SET NULL' }) // 👈 ربط البلد
+  @ManyToOne(() => Country, (country) => country.meals, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  }) // 👈 ربط البلد
   country?: Country;
 
   @OneToMany(() => Like, (like) => like.meal)
   likes: Like[];
-  
+
   @CreateDateColumn()
   createdAt: Date;
 

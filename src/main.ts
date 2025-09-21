@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -9,7 +8,7 @@ async function bootstrap() {
   dotenv.config();
   const app = await NestFactory.create(AppModule, { cors: true });
 
-    const config = new DocumentBuilder()
+  const config = new DocumentBuilder()
     .setTitle('Social Media API')
     .setDescription('API for a social media platform')
     .setVersion('1.0')
@@ -17,7 +16,7 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
-  
+
   await app.listen(process.env.PORT || 3000);
 }
 bootstrap();

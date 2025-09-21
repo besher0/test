@@ -1,6 +1,11 @@
-/* eslint-disable prettier/prettier */
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsUUID, IsNumber } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  IsNumber,
+} from 'class-validator';
 
 export class CreateMealDto {
   @ApiProperty({ example: 'كبسة لحم' })
@@ -44,4 +49,3 @@ export class CreateMealDto {
   @IsUUID()
   countryId?: string;
 }
-

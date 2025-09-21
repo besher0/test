@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -12,9 +11,7 @@ export class CategoryService {
   constructor(
     @InjectRepository(Category)
     private categoryRepository: Repository<Category>,
-    private cloudinaryService: CloudinaryService, 
-
-
+    private cloudinaryService: CloudinaryService,
   ) {}
 
   create(createCategoryDto: CreateCategoryDto): Promise<Category> {
@@ -22,92 +19,109 @@ export class CategoryService {
     return this.categoryRepository.save(category);
   }
 
- async findAll() {
- const categories = await this.categoryRepository.find({
-    select: ['id', 'name', 'image_url'],
-  });
+  async findAll() {
+    const categories = await this.categoryRepository.find({
+      select: ['id', 'name', 'image_url'],
+    });
 
-  return {
-    category: categories.map(c => ({
-      id: c.id,
-      name: c.name,
-      imageUrl: c.image_url || undefined,
-    })),
-  };
+    return {
+      category: categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        imageUrl: c.image_url || undefined,
+      })),
+    };
   }
 
-// async findByUser(userId: number): Promise<Category[]> {
-//     const userPreferences = await this.userPreferencesService.findOne({
-//       where: { user: { user_id: userId }, preference_type: 'favorite_food' },
-//       relations: ['user'],
-//     }) || { preference_value: null };
+  // async findByUser(userId: number): Promise<Category[]> {
+  //     const userPreferences = await this.userPreferencesService.findOne({
+  //       where: { user: { user_id: userId }, preference_type: 'favorite_food' },
+  //       relations: ['user'],
+  //     }) || { preference_value: null };
 
-//     const preferredValue = userPreferences?.preference_value || null;
+  //     const preferredValue = userPreferences?.preference_value || null;
 
-//     return this.categoryRepository
-//       .createQueryBuilder('category')
-//       .leftJoinAndSelect('category.user', 'user')
-//       .leftJoinAndSelect('category.posts', 'posts') 
-//       .orderBy(
-//         `CASE WHEN category.name = :preferred THEN 0 ELSE 1 END`, 
-//         'ASC'
-//       )
-//       .addOrderBy('category.name', 'ASC') 
-//       .setParameter('preferred', preferredValue)
-//       .getMany();
-//   }
+  //     return this.categoryRepository
+  //       .createQueryBuilder('category')
+  //       .leftJoinAndSelect('category.user', 'user')
+  //       .leftJoinAndSelect('category.posts', 'posts')
+  //       .orderBy(
+  //         `CASE WHEN category.name = :preferred THEN 0 ELSE 1 END`,
+  //         'ASC'
+  //       )
+  //       .addOrderBy('category.name', 'ASC')
+  //       .setParameter('preferred', preferredValue)
+  //       .getMany();
+  //   }
 
   findOne(id: string): Promise<Category> {
     return this.categoryRepository.findOneOrFail({ where: { id: id } });
   }
 
   update(id: string, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
-    return this.categoryRepository.update(id, updateCategoryDto).then(() => this.findOne(id));
+    return this.categoryRepository
+      .update(id, updateCategoryDto)
+      .then(() => this.findOne(id));
   }
 
   remove(id: number): Promise<void> {
     return this.categoryRepository.delete(id).then();
   }
 
-
-
-
-
-
-
-      async getFavoriteFoodCategories() {
+  async getFavoriteFoodCategories() {
     // قائمة الأصناف الستة المحددة للأكل المفضل
-    const foodCategories = ['لحمة', 'رز', 'مشروبات', 'حلويات', 'برغر', 'معكرونة'];
+    const foodCategories = [
+      'لحمة',
+      'رز',
+      'مشروبات',
+      'حلويات',
+      'برغر',
+      'معكرونة',
+    ];
 
     // جلب الأصناف من قاعدة البيانات مع روابط الصور إن وجدت
     const categories = await this.categoryRepository.find({
       where: { name: In(foodCategories) },
-      select: ['name', 'image_url',],
+      select: ['name', 'image_url'],
     });
 
     // تحويل الأصناف إلى صيغة الاستجابة مع إضافة الصور
     return {
-      category:foodCategories.slice(0,6).map(category => {
-      const dbCategory = categories.find(c => c.name === category);
-      return {
-        name: category,
-        id:dbCategory?.id,
-        imageUrl: dbCategory?.image_url || undefined,
-      };
-    }),
-  }
-    
+      category: foodCategories.slice(0, 6).map((category) => {
+        const dbCategory = categories.find((c) => c.name === category);
+        return {
+          name: category,
+          id: dbCategory?.id,
+          imageUrl: dbCategory?.image_url || undefined,
+        };
+      }),
+    };
   }
 
-  async uploadFoodCategoryImage(name: string, file: Express.Multer.File): Promise<{ message: string; imageUrl: string }> {
+  async uploadFoodCategoryImage(
+    name: string,
+    file: Express.Multer.File,
+  ): Promise<{ message: string; imageUrl: string }> {
     // قائمة الأصناف المسموح بها
-    const allowedCategories = ['لحمة', 'رز', 'مشروبات', 'حلويات', 'برغر', 'معكرونة'];
+    const allowedCategories = [
+      'لحمة',
+      'رز',
+      'مشروبات',
+      'حلويات',
+      'برغر',
+      'معكرونة',
+    ];
     if (!allowedCategories.includes(name)) {
-      throw new BadRequestException(`Category ${name} is not a valid favorite food category`);
+      throw new BadRequestException(
+        `Category ${name} is not a valid favorite food category`,
+      );
     }
 
     // رفع الصورة إلى Cloudinary
-    const result = await this.cloudinaryService.uploadImage(file, `food_categories/${name}`);
+    const result = await this.cloudinaryService.uploadImage(
+      file,
+      `food_categories/${name}`,
+    );
 
     // تحديث أو إنشاء الصنف في قاعدة البيانات
     let category = await this.categoryRepository.findOne({ where: { name } });

@@ -1,9 +1,22 @@
-/* eslint-disable prettier/prettier */
-import { Controller, Get, Post, Delete, Param, Body, UseGuards,  } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
 import { CartService } from './cart.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AddToCartDto } from './dto/dto.createCart';
 import { User } from 'src/user/user.entity';
 
@@ -21,37 +34,45 @@ export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Get()
-@ApiOperation({ summary: 'Get user cart' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiOperation({ summary: 'Get user cart' })
+  @ApiResponse({
+    status: 200,
     description: 'Return the current user cart',
     schema: {
       example: {
         id: 'cart-123',
         userId: 'user-456',
         items: [
-          { id: 'item-1', mealId: 'meal-789', quantity: 2, name: 'Pizza Margherita', price: 12.5 },
-          { id: 'item-2', mealId: 'meal-101', quantity: 1, name: 'Spaghetti Carbonara', price: 15 },
+          {
+            id: 'item-1',
+            mealId: 'meal-789',
+            quantity: 2,
+            name: 'Pizza Margherita',
+            price: 12.5,
+          },
+          {
+            id: 'item-2',
+            mealId: 'meal-101',
+            quantity: 1,
+            name: 'Spaghetti Carbonara',
+            price: 15,
+          },
         ],
         total: 40,
-      }
-    }
+      },
+    },
   })
-   getCart(@CurrentUser() user: UserJwt) {
+  getCart(@CurrentUser() user: UserJwt) {
     return this.cartService.getUserCart(user.sub);
   }
 
-@Post('add')
-@ApiOperation({ summary: 'Add an item to cart' })
-@ApiBody({ type: AddToCartDto })
-async addItem(
-  @CurrentUser() user: User,
-  @Body() body: AddToCartDto,
-) {
-  const { mealId, quantity } = body;
-  return this.cartService.addItem(user.id, mealId, quantity);
-}
-
+  @Post('add')
+  @ApiOperation({ summary: 'Add an item to cart' })
+  @ApiBody({ type: AddToCartDto })
+  async addItem(@CurrentUser() user: User, @Body() body: AddToCartDto) {
+    const { mealId, quantity } = body;
+    return this.cartService.addItem(user.id, mealId, quantity);
+  }
 
   @Delete(':itemId')
   @ApiOperation({ summary: 'Delete (":itemId")'.trim() })

@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { IsIn, IsOptional, IsString } from 'class-validator';
 
 export class UpdateOrderDto {

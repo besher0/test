@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -27,7 +26,9 @@ export class Story {
   @Column()
   expiresAt: Date;
 
-  @ManyToOne(() => Restaurant, (restaurant) => restaurant.stories, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Restaurant, (restaurant) => restaurant.stories, {
+    onDelete: 'CASCADE',
+  })
   restaurant: Restaurant;
 
   @OneToMany(() => Reaction, (reaction) => reaction.story, { cascade: true })

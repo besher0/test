@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { Module } from '@nestjs/common';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -8,7 +7,7 @@ import { CategoryModule } from './category/category.module';
 
 import { VideoModule } from './cloudinary.video/video.module';
 
-import {dataSourceOptions} from '../db/data-source'
+import { dataSourceOptions } from '../db/data-source';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { RestaurantModule } from './restaurant/restaurant.module';
@@ -25,10 +24,10 @@ import { ReelModule } from './story/reel.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
-  envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       isGlobal: true,
     }),
-    TypeOrmModule.forRoot(dataSourceOptions ),
+    TypeOrmModule.forRoot(dataSourceOptions),
     UserModule,
     VideoModule,
     CategoryModule,
@@ -42,10 +41,10 @@ import { ReelModule } from './story/reel.module';
     HomeModule,
     FollowModule,
     LikeModule,
-    ReelModule
+    ReelModule,
   ],
-controllers:[AppController],
-providers:[AppService]
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}
 

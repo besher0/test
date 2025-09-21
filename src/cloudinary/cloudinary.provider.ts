@@ -1,11 +1,9 @@
-/* eslint-disable prettier/prettier */
 import { v2 as cloudinary } from 'cloudinary';
-import { ConfigService } from '@nestjs/config';
 
 export const CloudinaryProvider = {
   provide: 'CLOUDINARY',
-  inject: [ConfigService],
-  useFactory: (config: ConfigService) => {
+  inject: [],
+  useFactory: () => {
     cloudinary.config({
       cloud_name: 'dxtjxxjbx',
       api_key: '377916524128891',

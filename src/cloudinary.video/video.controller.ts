@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import {
   Controller,
   // Post,
@@ -15,7 +14,12 @@ import {
 import { VideoService } from './video.service';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 
 @ApiTags('videos')
 @Controller('videos')
@@ -25,24 +29,24 @@ export class VideoController {
     private cloudinaryService: CloudinaryService,
   ) {}
 
-//   @Post('upload')
-//   @UseGuards(JwtAuthGuard)
-//   @ApiBearerAuth()
-//   @UseInterceptors(FileInterceptor('file', { storage: videoStorage }))
-//   @ApiOperation({ summary: 'Upload a video' })
-//   @ApiResponse({ status: 201, description: 'Video uploaded' })
-//   async uploadVideo(
-//     @UploadedFile() file: Express.Multer.File,
-//     @Body('userId') userId: number,
-//   ) {
-//  const result = await this.cloudinaryService.uploadVideo(file, 'user_videos');
-// const { url, publicId } = result;
-// return this.videoService.createVideo({
-//   url,
-//   publicId,
-//   userId,
-// });
-//   }
+  //   @Post('upload')
+  //   @UseGuards(JwtAuthGuard)
+  //   @ApiBearerAuth()
+  //   @UseInterceptors(FileInterceptor('file', { storage: videoStorage }))
+  //   @ApiOperation({ summary: 'Upload a video' })
+  //   @ApiResponse({ status: 201, description: 'Video uploaded' })
+  //   async uploadVideo(
+  //     @UploadedFile() file: Express.Multer.File,
+  //     @Body('userId') userId: number,
+  //   ) {
+  //  const result = await this.cloudinaryService.uploadVideo(file, 'user_videos');
+  // const { url, publicId } = result;
+  // return this.videoService.createVideo({
+  //   url,
+  //   publicId,
+  //   userId,
+  // });
+  //   }
 
   @Get()
   @UseGuards(JwtAuthGuard)

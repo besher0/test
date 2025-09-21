@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { Meal } from 'src/meal/meal.entity';
 import { ApiProperty } from '@nestjs/swagger';
@@ -20,12 +19,11 @@ export class Country {
 
   @ApiProperty()
   @Column({ type: 'text', nullable: true, name: 'logo_image' }) // 👈 نفس الشي
-  logoImage?:  string | null;;
+  logoImage?: string | null;
 
   @OneToMany(() => Meal, (meal) => meal.country)
   meals: Meal[];
 
   @OneToMany(() => Restaurant, (restaurant) => restaurant.country)
-restaurants: Restaurant[];
-
+  restaurants: Restaurant[];
 }

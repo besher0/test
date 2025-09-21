@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -23,11 +22,11 @@ export class Order {
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items: OrderItem[];
 
-    @ApiProperty({ required: true })
+  @ApiProperty({ required: true })
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
   totalPrice: number;
 
-    @ApiProperty({ required: true })
+  @ApiProperty({ required: true })
   @Column({
     type: 'enum',
     enum: ['PENDING', 'CONFIRMED', 'DELIVERED', 'CANCELED'],

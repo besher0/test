@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { IsNumber, IsNotEmpty, Min, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger'; // **استيراد Swagger**
 
@@ -13,10 +12,10 @@ export class AddToCartDto {
   mealId: string;
 
   @ApiProperty({
-      example: 2,
-      description: 'الكمية المراد إضافتها من المنتج',
-      type: Number,
-      minimum: 1,
+    example: 2,
+    description: 'الكمية المراد إضافتها من المنتج',
+    type: Number,
+    minimum: 1,
   })
   @IsNumber()
   @IsNotEmpty()

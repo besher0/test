@@ -1,6 +1,5 @@
-/* eslint-disable prettier/prettier */
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString,  } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateCountryDto {
   @ApiProperty({ example: 'السعودية' })
@@ -16,7 +15,7 @@ export class CreateCountryDto {
   })
   image?: any;
 
-    @ApiProperty({
+  @ApiProperty({
     type: 'string',
     format: 'binary',
     description: 'Country logoImage file',

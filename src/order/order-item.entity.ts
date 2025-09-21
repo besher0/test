@@ -1,10 +1,4 @@
-/* eslint-disable prettier/prettier */
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { Order } from './order.entity';
 import { Meal } from 'src/meal/meal.entity';
 import { ApiProperty } from '@nestjs/swagger';
@@ -17,8 +11,8 @@ export class OrderItem {
   @ManyToOne(() => Meal, { eager: true })
   meal: Meal;
 
-    @ApiProperty({ example: 2 })
-    @ApiProperty({ required: true })
+  @ApiProperty({ example: 2 })
+  @ApiProperty({ required: true })
   @Column()
   quantity: number;
 

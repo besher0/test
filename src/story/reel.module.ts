@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Story } from './story.entity';
@@ -10,7 +9,10 @@ import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 import { Reaction } from './reaction.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Story, User, Restaurant,Reaction]),CloudinaryModule],
+  imports: [
+    TypeOrmModule.forFeature([Story, User, Restaurant, Reaction]),
+    CloudinaryModule,
+  ],
   providers: [StoryService],
   controllers: [StoryController],
   exports: [StoryService],

@@ -1,14 +1,7 @@
-/* eslint-disable prettier/prettier */
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { Cart } from './cart.entity';
 import { Meal } from 'src/meal/meal.entity';
 import { ApiProperty } from '@nestjs/swagger';
-
 
 @Entity()
 export class CartItem {

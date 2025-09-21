@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import {
   Injectable,
   NotFoundException,
@@ -26,39 +25,38 @@ export class PostService {
   ) {}
 
   // Create a post — only restaurant owners (owner must be linked in Restaurant.owner)
-async createPost(
-  user: User,
-  dto: CreatePostDto,
-  fileUrl?: string,
-  thumbnailUrl?: string,
-): Promise<Post> {
-  if (user.userType !== 'restaurant') {
-    throw new ForbiddenException('Only restaurant owners can create posts');
+  async createPost(
+    user: User,
+    dto: CreatePostDto,
+    fileUrl?: string,
+    thumbnailUrl?: string,
+  ): Promise<Post> {
+    if (user.userType !== 'restaurant') {
+      throw new ForbiddenException('Only restaurant owners can create posts');
+    }
+
+    // نجيب المطعم تبع المستخدم
+    const restaurant = await this.restaurantRepo.findOne({
+      where: { owner: { id: user.id } },
+      relations: ['owner'],
+    });
+
+    if (!restaurant) {
+      throw new NotFoundException('No restaurant found for this user');
+    }
+
+    // ننشئ البوست الجديد
+    const post = this.postRepo.create({
+      text: dto.text,
+      mediaUrl: fileUrl,
+      thumbnailUrl,
+      restaurant: {
+        id: restaurant.id, // نخزن المطعم بشكل آمن
+      },
+    });
+
+    return this.postRepo.save(post);
   }
-
-  // نجيب المطعم تبع المستخدم
-  const restaurant = await this.restaurantRepo.findOne({
-    where: { owner: { id: user.id } },
-    relations: ['owner'],
-  });
-
-  if (!restaurant) {
-    throw new NotFoundException('No restaurant found for this user');
-  }
-
-  // ننشئ البوست الجديد
-  const post = this.postRepo.create({
-    text: dto.text,
-    mediaUrl: fileUrl,
-    thumbnailUrl,
-    restaurant: {
-      id: restaurant.id, // نخزن المطعم بشكل آمن
-    },
-  });
-
-  return this.postRepo.save(post);
-}
-
 
   // Update post — only owner of restaurant
   async updatePost(user: User, id: string, dto: UpdatePostDto): Promise<Post> {

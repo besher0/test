@@ -1,8 +1,10 @@
-/* eslint-disable prettier/prettier */
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ToggleLikeResponseDto {
-  @ApiProperty({ example: true, description: 'هل أعجب المستخدم بهذا العنصر الآن؟' })
+  @ApiProperty({
+    example: true,
+    description: 'هل أعجب المستخدم بهذا العنصر الآن؟',
+  })
   isLiked: boolean;
 
   @ApiProperty({ example: 'تم تسجيل الإعجاب بنجاح' })

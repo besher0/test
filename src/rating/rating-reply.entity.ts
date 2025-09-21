@@ -1,5 +1,12 @@
-/* eslint-disable prettier/prettier */
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToOne, CreateDateColumn, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToOne,
+  CreateDateColumn,
+  JoinColumn,
+} from 'typeorm';
 import { Rating } from './rating.entity';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 
@@ -12,7 +19,10 @@ export class RatingReply {
   @JoinColumn()
   rating: Rating;
 
-  @ManyToOne(() => Restaurant, (restaurant) => restaurant.replies, { onDelete: 'CASCADE', eager: true })
+  @ManyToOne(() => Restaurant, (restaurant) => restaurant.replies, {
+    onDelete: 'CASCADE',
+    eager: true,
+  })
   restaurant: Restaurant;
 
   @Column({ type: 'text' })

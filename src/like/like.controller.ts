@@ -1,10 +1,19 @@
-/* eslint-disable prettier/prettier */
 import { Controller, Post, Get, Param, UseGuards } from '@nestjs/common';
 import { LikeService } from './like.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiOkResponse } from '@nestjs/swagger';
-import { ToggleLikeResponseDto, MealLikeDto, RestaurantLikeDto } from './like.dto';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiOkResponse,
+} from '@nestjs/swagger';
+import {
+  ToggleLikeResponseDto,
+  MealLikeDto,
+  RestaurantLikeDto,
+} from './like.dto';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
 
@@ -19,7 +28,10 @@ export class LikeController {
   @ApiOperation({ summary: 'إعجاب/إلغاء إعجاب بوجبة' })
   @ApiParam({ name: 'mealId', description: 'معرّف الوجبة' })
   @ApiOkResponse({ type: ToggleLikeResponseDto })
-  async toggleMealLike(@Param('mealId') mealId: string, @CurrentUser() user: User) {
+  async toggleMealLike(
+    @Param('mealId') mealId: string,
+    @CurrentUser() user: User,
+  ) {
     return this.likeService.toggleMealLike(user, mealId);
   }
 
@@ -28,7 +40,10 @@ export class LikeController {
   @ApiOperation({ summary: 'إعجاب/إلغاء إعجاب بمطعم' })
   @ApiParam({ name: 'restaurantId', description: 'معرّف المطعم' })
   @ApiOkResponse({ type: ToggleLikeResponseDto })
-  async toggleRestaurantLike(@Param('restaurantId') restaurantId: string, @CurrentUser() user: User) {
+  async toggleRestaurantLike(
+    @Param('restaurantId') restaurantId: string,
+    @CurrentUser() user: User,
+  ) {
     return this.likeService.toggleRestaurantLike(user, restaurantId);
   }
 
@@ -41,11 +56,10 @@ export class LikeController {
   }
 
   @UseGuards(JwtAuthGuard)
-@Get('my-likes/restaurants')
-@ApiOperation({ summary: 'إرجاع قائمة إعجابات المطاعم الخاصة بالمستخدم' })
-@ApiOkResponse({ type: [RestaurantLikeDto] })
-async getRestaurantLikes(@CurrentUser() user: User) {
-  return this.likeService.getRestaurantLikes(user);
-}
-
+  @Get('my-likes/restaurants')
+  @ApiOperation({ summary: 'إرجاع قائمة إعجابات المطاعم الخاصة بالمستخدم' })
+  @ApiOkResponse({ type: [RestaurantLikeDto] })
+  async getRestaurantLikes(@CurrentUser() user: User) {
+    return this.likeService.getRestaurantLikes(user);
+  }
 }

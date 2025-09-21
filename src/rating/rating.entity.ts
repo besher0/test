@@ -1,5 +1,11 @@
-/* eslint-disable prettier/prettier */
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToOne, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToOne,
+  CreateDateColumn,
+} from 'typeorm';
 import { User } from 'src/user/user.entity';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { RatingReply } from './rating-reply.entity';
@@ -9,10 +15,15 @@ export class Rating {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User, (user) => user.ratings, { eager: true, onDelete: 'CASCADE' })
+  @ManyToOne(() => User, (user) => user.ratings, {
+    eager: true,
+    onDelete: 'CASCADE',
+  })
   user: User;
 
-  @ManyToOne(() => Restaurant, (restaurant) => restaurant.ratings, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Restaurant, (restaurant) => restaurant.ratings, {
+    onDelete: 'CASCADE',
+  })
   restaurant: Restaurant;
 
   @Column({ type: 'int', width: 1 })
@@ -22,7 +33,7 @@ export class Rating {
   comment?: string;
 
   @Column({ type: 'text', nullable: true })
-  imageUrl?: string|null;
+  imageUrl?: string | null;
 
   @OneToOne(() => RatingReply, (reply) => reply.rating)
   reply?: RatingReply;

@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ToggleFollowResponseDto {
@@ -16,7 +15,9 @@ export class FollowedRestaurantDto {
   @ApiProperty({ example: 'مطعم البيت الشامي' })
   name: string;
 
-  @ApiProperty({ example: 'https://res.cloudinary.com/demo/image/upload/restaurant.jpg' })
+  @ApiProperty({
+    example: 'https://res.cloudinary.com/demo/image/upload/restaurant.jpg',
+  })
   imageUrl: string;
 }
 

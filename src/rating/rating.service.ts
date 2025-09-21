@@ -1,5 +1,8 @@
-/* eslint-disable prettier/prettier */
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Rating } from './rating.entity';
@@ -21,48 +24,53 @@ export class RatingService {
 
     @InjectRepository(Restaurant)
     private readonly restaurantRepo: Repository<Restaurant>,
-     private readonly cloudinaryService: CloudinaryService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   // 1️⃣ إضافة تقييم جديد
-async addRatingWithImage(
-  user: User,
-  restaurantId: string,
-  dto: CreateRatingWithImageDto,
-  file?: Express.Multer.File,
-)
-: Promise<Rating> {
-  const restaurant = await this.restaurantRepo.findOne({ where: { id: restaurantId } });
-  if (!restaurant) throw new NotFoundException('Restaurant not found');
+  async addRatingWithImage(
+    user: User,
+    restaurantId: string,
+    dto: CreateRatingWithImageDto,
+    file?: Express.Multer.File,
+  ): Promise<Rating> {
+    const restaurant = await this.restaurantRepo.findOne({
+      where: { id: restaurantId },
+    });
+    if (!restaurant) throw new NotFoundException('Restaurant not found');
 
-  let imageUrl: string | null = null;
-  if (file) {
-    const result: UploadApiResponse = await this.cloudinaryService.uploadImage(
-      file,
-      'ratings', // 👈 مجلد Cloudinary
-    );
-    imageUrl = result.secure_url;
+    let imageUrl: string | null = null;
+    if (file) {
+      const result: UploadApiResponse =
+        await this.cloudinaryService.uploadImage(
+          file,
+          'ratings', // 👈 مجلد Cloudinary
+        );
+      imageUrl = result.secure_url;
+    }
+
+    const rating = this.ratingRepo.create({
+      user,
+      restaurant,
+      score: dto.score,
+      comment: dto.comment,
+      imageUrl,
+    });
+
+    await this.ratingRepo.save(rating);
+
+    // تحديث المتوسط الحسابي للمطعم
+    await this.updateRestaurantAverageRating(restaurantId);
+
+    return rating;
   }
 
-  const rating = this.ratingRepo.create({
-    user,
-    restaurant,
-    score: dto.score,
-    comment: dto.comment,
-    imageUrl,
-  });
-
-  await this.ratingRepo.save(rating);
-
-  // تحديث المتوسط الحسابي للمطعم
-  await this.updateRestaurantAverageRating(restaurantId);
-
-  return rating;
-}
-
-
   // 2️⃣ الرد على تقييم
-  async addReply(ratingId: string, owner: User, replyText: string): Promise<RatingReply> {
+  async addReply(
+    ratingId: string,
+    owner: User,
+    replyText: string,
+  ): Promise<RatingReply> {
     const rating = await this.ratingRepo.findOne({
       where: { id: ratingId },
       relations: ['restaurant'],
@@ -76,7 +84,9 @@ async addRatingWithImage(
     if (!restaurant) throw new NotFoundException('Restaurant not found');
 
     if (restaurant.owner.id !== owner.id) {
-      throw new ForbiddenException('You are not allowed to reply to this rating');
+      throw new ForbiddenException(
+        'You are not allowed to reply to this rating',
+      );
     }
 
     const reply = this.replyRepo.create({
@@ -90,7 +100,9 @@ async addRatingWithImage(
 
   // 3️⃣ جلب كل تقييمات مطعم
   async getRestaurantRatings(restaurantId: string): Promise<Rating[]> {
-    const restaurant = await this.restaurantRepo.findOne({ where: { id: restaurantId } });
+    const restaurant = await this.restaurantRepo.findOne({
+      where: { id: restaurantId },
+    });
     if (!restaurant) throw new NotFoundException('Restaurant not found');
 
     return this.ratingRepo.find({
@@ -100,17 +112,17 @@ async addRatingWithImage(
     });
   }
 
-private async updateRestaurantAverageRating(restaurantId: string): Promise<void> {
-  const ratings = await this.ratingRepo.find({
-    where: { restaurant: { id: restaurantId } },
-  });
+  private async updateRestaurantAverageRating(
+    restaurantId: string,
+  ): Promise<void> {
+    const ratings = await this.ratingRepo.find({
+      where: { restaurant: { id: restaurantId } },
+    });
 
-  if (ratings.length === 0) return;
+    if (ratings.length === 0) return;
 
-  const avg =
-    ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length;
+    const avg = ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length;
 
-  await this.restaurantRepo.update(restaurantId, { averageRating: avg });
-}
-
+    await this.restaurantRepo.update(restaurantId, { averageRating: avg });
+  }
 }

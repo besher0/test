@@ -1,5 +1,10 @@
-/* eslint-disable prettier/prettier */
-import { Entity, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn, Unique } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  CreateDateColumn,
+  Unique,
+} from 'typeorm';
 import { User } from 'src/user/user.entity';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 
@@ -12,7 +17,9 @@ export class Follow {
   @ManyToOne(() => User, (user) => user.follows, { onDelete: 'CASCADE' })
   user: User;
 
-  @ManyToOne(() => Restaurant, (restaurant) => restaurant.follows, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Restaurant, (restaurant) => restaurant.follows, {
+    onDelete: 'CASCADE',
+  })
   restaurant: Restaurant;
 
   @CreateDateColumn()

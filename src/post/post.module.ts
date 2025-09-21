@@ -8,8 +8,10 @@ import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 import { PostReaction } from './post-reaction.entity';
 
 @Module({
-  // eslint-disable-next-line prettier/prettier
-  imports: [TypeOrmModule.forFeature([Post,Restaurant,PostReaction]),CloudinaryModule],
+  imports: [
+    TypeOrmModule.forFeature([Post, Restaurant, PostReaction]),
+    CloudinaryModule,
+  ],
   providers: [PostService],
   controllers: [PostController],
   exports: [PostService],

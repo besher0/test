@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -23,58 +22,71 @@ export class MealService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(Country)
-private countryRepo: Repository<Country>,
+    private countryRepo: Repository<Country>,
     private cloudinaryService: CloudinaryService,
   ) {}
 
-async getMealsByUserPreference(userId: string): Promise<Meal[]> {
+  async getMealsByUserPreference(userId: string): Promise<Meal[]> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new Error('User not found');
     }
 
-if (!user.favoriteFood) {
-    return this.mealRepo.find({
-      relations: ['restaurant', 'category'],
-      order: { name: 'ASC' }, 
-    });
-  }
+    if (!user.favoriteFood) {
+      return this.mealRepo.find({
+        relations: ['restaurant', 'category'],
+        order: { name: 'ASC' },
+      });
+    }
 
-  const meals = await this.mealRepo
-    .createQueryBuilder('meal')
-    .leftJoinAndSelect('meal.restaurant', 'restaurant')
-    .leftJoinAndSelect('meal.category', 'category')
-    .addSelect(`
+    const meals = await this.mealRepo
+      .createQueryBuilder('meal')
+      .leftJoinAndSelect('meal.restaurant', 'restaurant')
+      .leftJoinAndSelect('meal.category', 'category')
+      .addSelect(
+        `
       CASE 
         WHEN category.name = :favoriteFood THEN 0
         ELSE 1
       END
-    `, 'customOrder')
-    .orderBy('customOrder', 'ASC')
-    .addOrderBy('meal.name', 'ASC')
-    .setParameter('favoriteFood', user.favoriteFood)
-    .getMany();
+    `,
+        'customOrder',
+      )
+      .orderBy('customOrder', 'ASC')
+      .addOrderBy('meal.name', 'ASC')
+      .setParameter('favoriteFood', user.favoriteFood)
+      .getMany();
 
-  return meals;
+    return meals;
   }
 
   async create(dto: CreateMealDto, file?: Express.Multer.File): Promise<Meal> {
-    const restaurant = await this.restaurantRepo.findOne({ where: { id: dto.restaurantId } });
+    const restaurant = await this.restaurantRepo.findOne({
+      where: { id: dto.restaurantId },
+    });
     if (!restaurant) throw new NotFoundException('Restaurant not found');
 
-    let category: Category|undefined ;
+    let category: Category | undefined;
     if (dto.categoryId) {
-    const foundCategory = await this.categoryRepo.findOne({ where: { id: dto.categoryId } });
-    category = foundCategory ?? undefined;     }
+      const foundCategory = await this.categoryRepo.findOne({
+        where: { id: dto.categoryId },
+      });
+      category = foundCategory ?? undefined;
+    }
 
- let country: Country | undefined;
-  if (dto.countryId) {
-    const foundCountry = await this.countryRepo.findOne({ where: { id: dto.countryId } });
-    country = foundCountry ?? undefined;
-  }
-     let image_url: string | undefined;
+    let country: Country | undefined;
+    if (dto.countryId) {
+      const foundCountry = await this.countryRepo.findOne({
+        where: { id: dto.countryId },
+      });
+      country = foundCountry ?? undefined;
+    }
+    let image_url: string | undefined;
     if (file) {
-      const result = await this.cloudinaryService.uploadImage(file, `meals/${dto.name}`);
+      const result = await this.cloudinaryService.uploadImage(
+        file,
+        `meals/${dto.name}`,
+      );
       image_url = result.secure_url;
     }
     const meal = this.mealRepo.create({
@@ -82,7 +94,7 @@ if (!user.favoriteFood) {
       restaurant,
       category,
       country,
-      image_url
+      image_url,
     });
 
     return this.mealRepo.save(meal);
@@ -103,18 +115,27 @@ if (!user.favoriteFood) {
     return meal;
   }
 
-  async update(id: string, dto: UpdateMealDto, file?: Express.Multer.File): Promise<Meal> {
+  async update(
+    id: string,
+    dto: UpdateMealDto,
+    file?: Express.Multer.File,
+  ): Promise<Meal> {
     const meal = await this.findOne(id);
 
     if (dto.categoryId) {
-      const category = await this.categoryRepo.findOneBy({ id: dto.categoryId });
+      const category = await this.categoryRepo.findOneBy({
+        id: dto.categoryId,
+      });
       meal.category = category ?? undefined;
     }
 
     Object.assign(meal, dto);
 
-        if (file) {
-      const result = await this.cloudinaryService.uploadImage(file, `meals/${meal.name}`);
+    if (file) {
+      const result = await this.cloudinaryService.uploadImage(
+        file,
+        `meals/${meal.name}`,
+      );
       meal.image_url = result.secure_url;
     }
     return this.mealRepo.save(meal);

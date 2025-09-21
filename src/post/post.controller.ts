@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import {
   Controller,
   Post as HttpPost,
@@ -33,32 +32,31 @@ import { ReactToPostDto } from './dto/react-to-post.dto';
 export class PostController {
   constructor(private readonly postService: PostService) {}
 
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
-@ApiOperation({ summary: 'Create a post (only restaurant owners)' })
-@ApiConsumes('multipart/form-data')
-@ApiBody({
-  schema: {
-    type: 'object',
-    properties: {
-      file: { type: 'string', format: 'binary' },
-      text: { type: 'string' },
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Create a post (only restaurant owners)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        text: { type: 'string' },
+      },
     },
-  },
-})
-@HttpPost()
-@UseInterceptors(FileInterceptor('file'))
-async createPost(
-  @CurrentUser() user: User,
-  @Body() dto: CreatePostDto,
-  @UploadedFile() file?: Express.Multer.File,
-) {
-  const fileUrl = file?.path;
-  const thumbnailUrl = file ? `thumbnail-of-${file.filename}` : undefined;
+  })
+  @HttpPost()
+  @UseInterceptors(FileInterceptor('file'))
+  async createPost(
+    @CurrentUser() user: User,
+    @Body() dto: CreatePostDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const fileUrl = file?.path;
+    const thumbnailUrl = file ? `thumbnail-of-${file.filename}` : undefined;
 
-  return this.postService.createPost(user, dto, fileUrl, thumbnailUrl);
-}
-
+    return this.postService.createPost(user, dto, fileUrl, thumbnailUrl);
+  }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
