@@ -67,10 +67,14 @@ async toggleLike(user: User, targetId: string) {
       },
       relations: ['meal'],
     });
-    return likes.map((like) => ({
+return {
+    meals: likes.map((like) => ({
       id: like.meal.id,
       name: like.meal.name,
-    }));
+      imageUrl: like.meal.image_url || undefined,
+    })),
+};
+
   }
 
   async getRestaurantLikes(user: User) {
@@ -82,11 +86,14 @@ async toggleLike(user: User, targetId: string) {
       relations: ['restaurant'],
     });
 
-    return likes.map((like) => ({
+  return {
+    restaurants: likes.map((like) => ({
       id: like.restaurant.id,
       name: like.restaurant.name,
-    }));
-  }
+      imageUrl: like.restaurant.logo_url || undefined,
+    })),
+  };
+}
 
   async getCountryLikes(user: User) {
   const likes = await this.likeRepo.find({
@@ -97,10 +104,12 @@ async toggleLike(user: User, targetId: string) {
     relations: ['country'],
   });
 
-  return likes.map((like) => ({
-    id: like.country.id,
-    name: like.country.name,
-    imageUrl: like.country.imageUrl,
-  }));
+  return {
+    countries: likes.map((like) => ({
+      id: like.country.id,
+      name: like.country.name,
+      imageUrl: like.country.imageUrl || undefined,
+    })),
+  };
 }
 }
