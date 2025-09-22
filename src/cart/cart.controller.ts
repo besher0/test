@@ -19,6 +19,7 @@ import {
 } from '@nestjs/swagger';
 import { AddToCartDto } from './dto/dto.createCart';
 import { User } from 'src/user/user.entity';
+import { AddMultipleToCartDto } from './dto/add-multiple-to-cart.dto';
 
 type UserJwt = {
   sub: string;
@@ -72,6 +73,16 @@ export class CartController {
   async addItem(@CurrentUser() user: User, @Body() body: AddToCartDto) {
     const { mealId, quantity } = body;
     return this.cartService.addItem(user.id, mealId, quantity);
+  }
+
+  @Post('add-multiple')
+  @ApiOperation({ summary: 'Add multiple items to cart' })
+  @ApiBody({ type: AddMultipleToCartDto })
+  async addMultipleItems(
+    @CurrentUser() user: User,
+    @Body() body: AddMultipleToCartDto,
+  ) {
+    return this.cartService.addMultipleItems(user.id, body.items);
   }
 
   @Delete(':itemId')

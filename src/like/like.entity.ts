@@ -9,10 +9,12 @@ import { User } from 'src/user/user.entity';
 import { Meal } from 'src/meal/meal.entity';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { ApiProperty } from '@nestjs/swagger';
+import { Country } from 'src/country/county.entity';
 
 @Entity()
 @Unique(['user', 'meal'])
 @Unique(['user', 'restaurant'])
+@Unique(['user', 'country'])
 export class Like {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
@@ -37,6 +39,14 @@ export class Like {
     onDelete: 'CASCADE',
   })
   restaurant: Restaurant;
+
+  @ManyToOne(() => Country, {
+    nullable: true,
+    eager: true,
+    onDelete: 'CASCADE',
+  })
+  @ApiProperty({ type: () => Country, required: false })
+  country: Country;
 
   @ApiProperty({ example: '2025-09-14T12:34:56Z' })
   @CreateDateColumn()

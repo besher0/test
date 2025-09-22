@@ -30,3 +30,20 @@ export class RestaurantLikeDto {
   id: number;
   name: string;
 }
+
+export class CountryLikeDto {
+  @ApiProperty({
+    description: 'معرّف الدولة',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  id: string;
+
+  @ApiProperty({ description: 'اسم الدولة', example: 'سوريا' })
+  name: string;
+
+  @ApiProperty({
+    description: 'صورة الدولة',
+    example: 'https://res.cloudinary.com/.../countries/flag.png',
+  })
+  imageUrl: string;
+}

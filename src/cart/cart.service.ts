@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import {
   BadRequestException,
   Injectable,
@@ -9,6 +10,7 @@ import { Cart } from './cart.entity';
 import { CartItem } from './cart-item.entity';
 import { Meal } from 'src/meal/meal.entity';
 import { User } from 'src/user/user.entity';
+import { AddToCartDto } from './dto/dto.createCart';
 
 @Injectable()
 export class CartService {
@@ -18,7 +20,16 @@ export class CartService {
     @InjectRepository(Meal) private mealRepo: Repository<Meal>,
     @InjectRepository(User) private userRepo: Repository<User>,
   ) {}
-
+  // eslint-disable-next-line @typescript-eslint/require-await
+  private async calculateCartTotal(cart: Cart): Promise<number> {
+    let total = 0;
+    for (const item of cart.items) {
+      if (item.meal && item.meal.price) {
+        total += item.quantity * parseFloat(item.meal.price as any);
+      }
+    }
+    return total;
+  }
   async getUserCart(userId: string): Promise<Cart> {
     let cart = await this.cartRepo.findOne({
       where: { userId },
@@ -31,124 +42,100 @@ export class CartService {
       cart = this.cartRepo.create({ userId, user, items: [] });
       cart = await this.cartRepo.save(cart);
     }
-    return cart;
-  }
+    cart.total = await this.calculateCartTotal(cart);
+    return cart;  }
 
-  async addItem(
+async addItem(
     userId: string,
     mealId: string,
-    quantity: number,
-  ): Promise<Cart> {
-    console.log('➡️ addItem called with:', { userId, mealId, quantity });
-
-    // ✅ 0. تحقق من المدخلات
+    quantity = 1,
+  ) {
     if (!mealId) {
-      console.error('❌ mealId is missing');
       throw new BadRequestException('mealId is required');
     }
-    if (!quantity || quantity <= 0) {
-      console.error('❌ Invalid quantity:', quantity);
-      throw new BadRequestException('quantity must be greater than 0');
-    }
-
-    // ✅ 1. جلب الوجبة + المطعم
+    
     const meal = await this.mealRepo.findOne({
       where: { id: mealId },
       relations: ['restaurant'],
     });
-    console.log('🍔 Meal from DB:', meal);
-
     if (!meal) {
-      console.error('❌ Meal not found for ID:', mealId);
       throw new NotFoundException('Meal not found');
     }
 
-    // ✅ 2. جلب أو إنشاء السلة
     let cart = await this.cartRepo.findOne({
       where: { userId },
       relations: ['items', 'items.meal', 'items.meal.restaurant'],
     });
-    console.log('🛒 Cart before changes:', JSON.stringify(cart, null, 2));
 
     if (!cart) {
       const user = await this.userRepo.findOne({ where: { id: userId } });
       if (!user) {
-        console.error('❌ User not found for ID:', userId);
         throw new NotFoundException('User not found');
       }
-
       cart = this.cartRepo.create({ userId, user, items: [] });
-      cart = await this.cartRepo.save(cart);
-      console.log('🆕 New cart created:', cart.id);
     }
 
-    // ✅ 3. تحقق أن جميع العناصر من نفس المطعم
     if (cart.items.length > 0) {
       const existingRestaurantId = cart.items[0].meal.restaurant.id;
-      console.log('🏷 Existing restaurant in cart:', existingRestaurantId);
-      console.log('🏷 Incoming restaurant:', meal.restaurant.id);
-
       if (existingRestaurantId !== meal.restaurant.id) {
-        console.error('❌ Different restaurant detected');
         throw new BadRequestException(
           'لا يمكنك الطلب من أكثر من مطعم في نفس السلة',
         );
       }
     }
 
-    // ✅ 4. تحقق إذا العنصر موجود مسبقًا
-    let item = await this.cartItemRepo.findOne({
-      where: {
-        cart: { id: cart.id },
-        meal: { id: meal.id },
-      },
-      relations: ['meal', 'cart'],
-    });
-    console.log('🔍 Existing item in cart:', item);
-
+    let item = cart.items.find((i) => i.meal.id === meal.id);
     if (item) {
       item.quantity += quantity;
-      await this.cartItemRepo.save(item);
-      console.log('✏️ Updated item quantity:', item.quantity);
     } else {
       item = this.cartItemRepo.create({ meal, quantity, cart });
-      await this.cartItemRepo.save(item);
-      console.log('➕ New item added to cart:', item.id);
+      cart.items.push(item);
     }
 
-    // ✅ 5. إرجاع JSON مرتب
-    const result = await this.cartRepo
-      .createQueryBuilder('cart')
-      .leftJoinAndSelect('cart.items', 'items')
-      .leftJoinAndSelect('items.meal', 'meal')
-      .leftJoinAndSelect('meal.restaurant', 'restaurant')
-      .select([
-        'cart.id',
-        'cart.userId',
-        'items.id',
-        'items.quantity',
-        'meal.id',
-        'meal.name',
-        'meal.price',
-        'meal.image_url',
-        'restaurant.id',
-        'restaurant.name',
-        'restaurant.logo_url',
-      ])
-      .where('cart.id = :cartId', { cartId: cart.id })
-      .getOneOrFail();
-
-    console.log('✅ Final cart result:', JSON.stringify(result, null, 2));
-    return result;
+    // حفظ التغييرات في السلة والعناصر
+    await this.cartRepo.save(cart);
+    await this.cartItemRepo.save(item);
+    
+    // إعادة تحميل السلة لحساب المجموع بشكل صحيح
+    const updatedCart = await this.cartRepo.findOne({
+      where: { userId },
+      relations: ['items', 'items.meal', 'items.meal.restaurant'],
+    });
+    
+    // حساب المجموع وتحديثه قبل الإرجاع
+    if (!updatedCart) {
+      throw new NotFoundException('Cart not found after update');
+    }
+    updatedCart.total = await this.calculateCartTotal(updatedCart);
+    await this.cartRepo.save(updatedCart);
+    return updatedCart;
   }
 
-  async removeItem(userId: string, itemId: string): Promise<Cart> {
+  async addMultipleItems(
+  userId: string,
+  items: AddToCartDto[],
+): Promise<Cart> {
+  if (!items || items.length === 0) {
+    throw new BadRequestException('No items provided');
+  }
+
+
+  for (const item of items) {
+    const { mealId, quantity=1 } = item;
+    await this.addItem(userId, mealId, quantity);
+  }
+
+  return this.getUserCart(userId);
+}
+
+async removeItem(userId: string, itemId: string): Promise<Cart> {
     const cart = await this.getUserCart(userId);
     if (!cart) throw new NotFoundException('Cart not found');
-
+    
     await this.cartItemRepo.delete(itemId);
     cart.items = cart.items.filter((item) => item.id !== itemId);
-
+    
+    cart.total = await this.calculateCartTotal(cart);
     return this.cartRepo.save(cart);
   }
 
@@ -158,7 +145,7 @@ export class CartService {
 
     await this.cartItemRepo.delete({ cart: { id: cart.id } });
     cart.items = [];
-
+    cart.total = 0;
     return this.cartRepo.save(cart);
   }
 }

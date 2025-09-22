@@ -14,6 +14,8 @@ import { RestaurantImage } from './restaurant-image.entity';
 import { RestaurantVideo } from './restaurant-video.entity';
 import { Follow } from 'src/follow/follow.entity';
 import { FilterService } from './filter.service';
+import { DeliveryLocation } from './delivery-location.entity';
+import { DeliveryLocationController } from './delivery-location.controller';
 
 @Module({
   imports: [
@@ -27,12 +29,13 @@ import { FilterService } from './filter.service';
       RestaurantImage,
       RestaurantVideo,
       Follow,
+      DeliveryLocation,
     ]),
     CloudinaryModule,
     CountryModule,
   ],
   providers: [RestaurantService, FilterService],
-  controllers: [RestaurantController],
+  controllers: [RestaurantController, DeliveryLocationController],
   exports: [RestaurantService],
 })
 export class RestaurantModule {}

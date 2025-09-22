@@ -1,3 +1,4 @@
+// ...existing code...
 import {
   ForbiddenException,
   Injectable,
@@ -18,6 +19,7 @@ import { RestaurantImage } from './restaurant-image.entity';
 import { RestaurantVideo } from './restaurant-video.entity';
 import { Follow } from 'src/follow/follow.entity';
 import { RestaurantProfileDto } from './dto/RestaurantProfileDto';
+import { DeliveryLocation } from './delivery-location.entity';
 
 // واجهة Response مخصصة
 export interface RestaurantResponse extends Omit<Restaurant, 'owner'> {
@@ -52,6 +54,8 @@ export class RestaurantService {
     private videoRepo: Repository<RestaurantVideo>,
     @InjectRepository(Follow)
     private readonly followRepo: Repository<Follow>,
+    @InjectRepository(DeliveryLocation)
+    private deliveryLocationRepo: Repository<DeliveryLocation>,
   ) {}
 
   private mapOwner(user: User) {
@@ -173,6 +177,8 @@ export class RestaurantService {
     if (dto.location) restaurant.location = dto.location;
     if (dto.description) restaurant.description = dto.description;
     if (dto.workingHours) restaurant.workingHours = dto.workingHours;
+    if (dto.latitude !== undefined) restaurant.latitude = dto.latitude;
+    if (dto.longitude !== undefined) restaurant.longitude = dto.longitude;
 
     if (dto.countryId) {
       const country = await this.countryRepo.findOne({
@@ -458,6 +464,44 @@ export class RestaurantService {
 
     await this.videoRepo.delete(videoId);
     return { success: true };
+  }
+  async addDeliveryLocation(
+    restaurantId: string,
+    dto: Partial<DeliveryLocation>,
+    userId: string,
+  ): Promise<DeliveryLocation> {
+    const restaurant = await this.restaurantRepo.findOne({
+      where: { id: restaurantId },
+      relations: ['owner'],
+    });
+    if (!restaurant) throw new NotFoundException('Restaurant not found');
+    if (restaurant.owner.id !== userId) {
+      throw new ForbiddenException('Only the owner can add delivery locations');
+    }
+    const location = this.deliveryLocationRepo.create({ ...dto, restaurant });
+    return this.deliveryLocationRepo.save(location);
+  }
+
+  async deleteDeliveryLocation(id: string, userId: string): Promise<void> {
+    const location = await this.deliveryLocationRepo.findOne({
+      where: { id },
+      relations: ['restaurant', 'restaurant.owner'],
+    });
+    if (!location) throw new NotFoundException('Delivery location not found');
+    if (location.restaurant.owner.id !== userId) {
+      throw new ForbiddenException(
+        'Only the owner can delete delivery locations',
+      );
+    }
+    await this.deliveryLocationRepo.delete(id);
+  }
+
+  async getDeliveryLocations(
+    restaurantId: string,
+  ): Promise<DeliveryLocation[]> {
+    return this.deliveryLocationRepo.find({
+      where: { restaurant: { id: restaurantId } },
+    });
   }
 }
 //316dd92a-bae2-4849-9eb5-a62447b4433a

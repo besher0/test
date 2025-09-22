@@ -13,6 +13,7 @@ import {
   ToggleLikeResponseDto,
   MealLikeDto,
   RestaurantLikeDto,
+  CountryLikeDto,
 } from './like.dto';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
@@ -24,32 +25,19 @@ export class LikeController {
   constructor(private readonly likeService: LikeService) {}
 
   @UseGuards(JwtAuthGuard)
-  @Post('meal/:mealId')
-  @ApiOperation({ summary: 'إعجاب/إلغاء إعجاب بوجبة' })
-  @ApiParam({ name: 'mealId', description: 'معرّف الوجبة' })
+  @Post(':id')
+  @ApiOperation({
+    summary: 'إعجاب/إلغاء إعجاب (وجبة، مطعم، دولة) حسب المعرّف فقط',
+  })
+  @ApiParam({ name: 'id', description: 'معرّف العنصر (وجبة / مطعم / دولة)' })
   @ApiOkResponse({ type: ToggleLikeResponseDto })
-  async toggleMealLike(
-    @Param('mealId') mealId: string,
-    @CurrentUser() user: User,
-  ) {
-    return this.likeService.toggleMealLike(user, mealId);
+  async toggleLike(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.likeService.toggleLike(user, id);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post('restaurant/:restaurantId')
-  @ApiOperation({ summary: 'إعجاب/إلغاء إعجاب بمطعم' })
-  @ApiParam({ name: 'restaurantId', description: 'معرّف المطعم' })
-  @ApiOkResponse({ type: ToggleLikeResponseDto })
-  async toggleRestaurantLike(
-    @Param('restaurantId') restaurantId: string,
-    @CurrentUser() user: User,
-  ) {
-    return this.likeService.toggleRestaurantLike(user, restaurantId);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('my-likes')
-  @ApiOperation({ summary: 'إرجاع قائمة الإعجابات الخاصة بالمستخدم' })
+  @Get('my-likes/meals')
+  @ApiOperation({ summary: 'إرجاع قائمة الإعجابات الخاصة بالوجبات' })
   @ApiOkResponse({ type: MealLikeDto })
   async getMyLikes(@CurrentUser() user: User) {
     return this.likeService.getMealLikes(user);
@@ -61,5 +49,13 @@ export class LikeController {
   @ApiOkResponse({ type: [RestaurantLikeDto] })
   async getRestaurantLikes(@CurrentUser() user: User) {
     return this.likeService.getRestaurantLikes(user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('my-likes/countries')
+  @ApiOperation({ summary: 'إرجاع قائمة إعجابات الدول الخاصة بالمستخدم' })
+  @ApiOkResponse({ type: [CountryLikeDto] })
+  async getCountryLikes(@CurrentUser() user: User) {
+    return this.likeService.getCountryLikes(user);
   }
 }

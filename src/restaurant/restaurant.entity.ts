@@ -45,6 +45,22 @@ export class Restaurant {
   location: string;
 
   @ApiProperty({
+    example: 33.123456,
+    description: 'خط العرض للموقع الرئيسي',
+    required: false,
+  })
+  @Column('decimal', { precision: 10, scale: 6, nullable: true })
+  latitude?: number;
+
+  @ApiProperty({
+    example: 36.123456,
+    description: 'خط الطول للموقع الرئيسي',
+    required: false,
+  })
+  @Column('decimal', { precision: 10, scale: 6, nullable: true })
+  longitude?: number;
+
+  @ApiProperty({
     example: 'RESTAURANT-12345',
     required: false,
   })

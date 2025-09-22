@@ -6,9 +6,10 @@ import { LikeController } from './like.controller';
 import { Meal } from 'src/meal/meal.entity';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { User } from 'src/user/user.entity';
+import { Country } from 'src/country/county.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Like, Meal, Restaurant, User])],
+  imports: [TypeOrmModule.forFeature([Like, Meal, Restaurant, User, Country])],
   providers: [LikeService],
   controllers: [LikeController],
   exports: [LikeService],
