@@ -15,7 +15,7 @@ import { Category } from 'src/category/category.entity';
     forwardRef(() => AuthModule),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'your_jwt_secret',
-      // signOptions: { expiresIn: '12h' },
+      signOptions: { expiresIn: '5d' },
     }),
   ],
   controllers: [UserController],
