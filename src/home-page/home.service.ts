@@ -31,72 +31,49 @@ export class HomeService {
         Array.isArray(user.favoriteFood) &&
         user.favoriteFood.length > 0
       ) {
-        // IDs للمأكولات المفضلة
-        const favIds: number[] = user.favoriteFood.map((f: Meal) =>
-          Number(f.id),
-        );
+        const favIds = user.favoriteFood.map((f: Meal) => f.id);
 
-        // نجيب الوجبات المفضلة
         favoriteMeals = await this.mealRepo.find({
           where: { id: In(favIds) },
-          relations: ['restaurant'],
+          relations: ['restaurant', 'likes'],
           take: 7,
         });
 
-        // لو أقل من 7 نكمل
         if (favoriteMeals.length < 7) {
           const needed = 7 - favoriteMeals.length;
           const extraMeals = await this.mealRepo.find({
             where: { id: Not(In(favIds)) },
-            relations: ['restaurant'],
+            relations: ['restaurant', 'likes'],
             take: needed,
           });
           favoriteMeals = [...favoriteMeals, ...extraMeals];
         }
       } else {
-        // لو ما عنده ولا وجبة
         favoriteMeals = await this.mealRepo.find({
           take: 7,
-          relations: ['restaurant'],
+          relations: ['restaurant', 'likes'],
         });
       }
     } else {
-      // fallback: لو ما في توكن
       favoriteMeals = await this.mealRepo.find({
         take: 7,
-        relations: ['restaurant'],
+        relations: ['restaurant', 'likes'],
       });
     }
 
-    // 2. المطابخ العربية (من جدول Country)
+    // المطابخ العربية
     const arabicKitchens = await this.countryRepo.find({
       take: 7,
       order: { name: 'ASC' },
+      relations: ['likes'],
     });
 
-    // 3. المطاعم الموصى بها
-    // const rawRestaurants = await this.restRepo
-    //   .createQueryBuilder('r')
-    //   .leftJoin('r.ratings', 'rating')
-    //   .select([
-    //     'r.id AS id',
-    //     'r.name AS name',
-    //     'r.logo_url AS logoUrl',
-    //     'r.description AS description',
-    //     'AVG(rating.score) AS avgRating',
-    //   ])
-    //   .groupBy('r.id')
-    //   .addGroupBy('r.name')
-    //   .addGroupBy('r.logo_url')
-    //   .addGroupBy('r.description')
-    //   .orderBy('avgRating', 'DESC')
-    //   .limit(7)
-    //   .getRawMany();
-
+    // المطاعم الموصى بها
     const recommendedRestaurants = await this.restRepo.find({
       order: { averageRating: 'DESC' },
       take: 7,
       select: ['id', 'name', 'logo_url', 'description', 'averageRating'],
+      relations: ['likes'],
     });
 
     return {
@@ -108,9 +85,24 @@ export class HomeService {
         restaurant: meal.restaurant
           ? { id: meal.restaurant.id, name: meal.restaurant.name }
           : null,
+        isLiked: userId ? meal.likes.some((l) => l.user.id === userId) : false,
       })),
-      arabicKitchens,
-      recommendedRestaurants,
+      arabicKitchens: arabicKitchens.map((country) => ({
+        id: country.id,
+        name: country.name,
+        imageUrl: country.imageUrl,
+        isLiked: userId
+          ? country.likes.some((l) => l.user.id === userId)
+          : false,
+      })),
+      recommendedRestaurants: recommendedRestaurants.map((r) => ({
+        id: r.id,
+        name: r.name,
+        logoUrl: r.logo_url,
+        description: r.description,
+        rating: r.averageRating,
+        isLiked: userId ? r.likes.some((l) => l.user.id === userId) : false,
+      })),
     };
   }
 }

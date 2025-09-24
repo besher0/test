@@ -40,12 +40,10 @@ export class Like {
   })
   restaurant: Restaurant;
 
-  @ManyToOne(() => Country, {
+  @ManyToOne(() => Country, (country) => country.likes, {
     nullable: true,
-    eager: true,
     onDelete: 'CASCADE',
   })
-  @ApiProperty({ type: () => Country, required: false })
   country: Country;
 
   @ApiProperty({ example: '2025-09-14T12:34:56Z' })

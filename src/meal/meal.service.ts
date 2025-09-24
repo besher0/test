@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -100,27 +103,62 @@ export class MealService {
     return this.mealRepo.save(meal);
   }
 
-  async findAll(): Promise<Meal[]> {
-    return this.mealRepo.find({
-      relations: ['restaurant', 'category'],
+  async findAll(user: User): Promise<any[]> {
+    const meals = await this.mealRepo.find({
+      relations: ['restaurant', 'category', 'likes'],
     });
+
+    return meals.map((meal) => ({
+      id: meal.id,
+      name: meal.name,
+      imageUrl: meal.image_url,
+      restaurant: {
+        id: meal.restaurant?.id,
+        name: meal.restaurant?.name,
+      },
+      category: {
+        id: meal.category?.id,
+        name: meal.category?.name,
+      },
+      isLiked: user
+        ? meal.likes.some((like) => like.user.id === user.id)
+        : false,
+    }));
   }
 
-  async findOne(id: string): Promise<Meal> {
+  async findOne(id: string, user: User): Promise<any> {
     const meal = await this.mealRepo.findOne({
       where: { id },
-      relations: ['restaurant', 'category'],
+      relations: ['restaurant', 'category', 'likes'],
     });
+
     if (!meal) throw new NotFoundException('Meal not found');
-    return meal;
+
+    return {
+      id: meal.id,
+      name: meal.name,
+      imageUrl: meal.image_url,
+      restaurant: {
+        id: meal.restaurant?.id,
+        name: meal.restaurant?.name,
+      },
+      category: {
+        id: meal.category?.id,
+        name: meal.category?.name,
+      },
+      isLiked: user
+        ? meal.likes.some((like) => like.user.id === user.id)
+        : false,
+    };
   }
 
   async update(
     id: string,
     dto: UpdateMealDto,
+    user: User, // ✅ إضافة باراميتر المستخدم
     file?: Express.Multer.File,
   ): Promise<Meal> {
-    const meal = await this.findOne(id);
+    const meal = await this.findOne(id, user); // ✅ تمرير المستخدم هنا
 
     if (dto.categoryId) {
       const category = await this.categoryRepo.findOneBy({
@@ -141,8 +179,10 @@ export class MealService {
     return this.mealRepo.save(meal);
   }
 
-  async remove(id: string): Promise<void> {
-    const meal = await this.findOne(id);
+  // في دالة الحذف (remove)
+  async remove(id: string, user: User): Promise<void> {
+    // ✅ إضافة باراميتر المستخدم
+    const meal = await this.findOne(id, user); // ✅ تمرير المستخدم هنا
     await this.mealRepo.remove(meal);
   }
 }

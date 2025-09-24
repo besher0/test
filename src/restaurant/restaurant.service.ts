@@ -139,10 +139,10 @@ export class RestaurantService {
     }));
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, user?: User) {
     const restaurant = await this.restaurantRepo.findOne({
       where: { id },
-      relations: ['owner', 'category'],
+      relations: ['owner', 'category', 'likes', 'likes.user'],
     });
 
     if (!restaurant) throw new NotFoundException('Restaurant not found');
@@ -157,6 +157,9 @@ export class RestaurantService {
       createdAt: restaurant.createdAt,
       updatedAt: restaurant.updatedAt,
       owner: this.mapOwner(restaurant.owner),
+      isLiked: user
+        ? restaurant.likes.some((like) => like.user.id === user.id)
+        : false,
     };
   }
 

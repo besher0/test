@@ -24,6 +24,9 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
+import { User } from 'src/user/user.entity';
+import { OptionalAuthGuard } from 'src/auth/guards/optional-auth.guard';
 
 @Controller('meals')
 export class MealController {
@@ -70,19 +73,23 @@ export class MealController {
   ) {
     return this.mealService.create(dto, file);
   }
-
+  @UseGuards(OptionalAuthGuard)
   @Get()
-  @ApiOperation({ summary: 'Get ()'.trim() })
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Get all meals' })
   @ApiResponse({ status: 200, description: 'Success' })
-  findAll() {
-    return this.mealService.findAll();
+  findAll(@CurrentUser() user: User) {
+    return this.mealService.findAll(user);
   }
-
+  @UseGuards(OptionalAuthGuard)
   @Get(':id')
-  @ApiOperation({ summary: "Get (':id')".trim() })
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Get meal by id' })
   @ApiResponse({ status: 200, description: 'Success' })
-  findOne(@Param('id') id: string) {
-    return this.mealService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.mealService.findOne(id, user);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -113,15 +120,19 @@ export class MealController {
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateMealDto,
+    @CurrentUser() user: User,
     @UploadedFile() file?: Express.Multer.File,
+    // ✅ إضافة باراميتر المستخدم
   ): Promise<Meal> {
-    return this.mealService.update(id, dto, file);
+    return this.mealService.update(id, dto, user, file); // ✅ تمرير المستخدم إلى الخدمة
   }
 
+  // في دالة الحذف (remove)
   @Delete(':id')
   @ApiOperation({ summary: "Delete (':id')".trim() })
   @ApiResponse({ status: 200, description: 'Success' })
-  remove(@Param('id') id: string) {
-    return this.mealService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: User) {
+    // ✅ إضافة باراميتر المستخدم
+    return this.mealService.remove(id, user); // ✅ تمرير المستخدم إلى الخدمة
   }
 }

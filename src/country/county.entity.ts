@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { Meal } from 'src/meal/meal.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
+import { Like } from 'src/like/like.entity';
 
 @Entity()
 export class Country {
@@ -26,4 +27,7 @@ export class Country {
 
   @OneToMany(() => Restaurant, (restaurant) => restaurant.country)
   restaurants: Restaurant[];
+
+  @OneToMany(() => Like, (like) => like.country)
+  likes: Like[];
 }

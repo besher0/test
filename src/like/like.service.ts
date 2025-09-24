@@ -35,7 +35,7 @@ async toggleLike(user: User, targetId: string) {
     throw new NotFoundException('Entity not found');
   }
 
-  const whereCondition: Record<string, any> = { user: { id: user.id } };
+    const whereCondition: Record<string, any> = { user: { id: user.id } };
   if (type === 'meal') whereCondition.meal = { id: (entity as Meal).id };
   if (type === 'restaurant') whereCondition.restaurant = { id: (entity as Restaurant).id };
   if (type === 'country') whereCondition.country = { id: (entity as Country).id };

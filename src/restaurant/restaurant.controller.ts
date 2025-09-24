@@ -144,6 +144,8 @@ export class RestaurantController {
   }
 
   @Get(':id')
+  @UseGuards(OptionalAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a restaurant by ID' })
   @ApiOkResponse({
     type: Restaurant,
@@ -175,8 +177,8 @@ export class RestaurantController {
       },
     },
   })
-  findOne(@Param('id') id: string) {
-    return this.restaurantService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.restaurantService.findOne(id, user);
   }
 
   @UseGuards(JwtAuthGuard)
