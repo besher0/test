@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { BusinessType } from '../restaurant.entity';
 
 export class CreateRestaurantDto {
   @ApiProperty({
@@ -42,6 +43,10 @@ export class CreateRestaurantDto {
   @IsOptional()
   @IsString()
   logo_url?: string;
+
+  @IsOptional()
+  @IsEnum(BusinessType)
+  type?: BusinessType = BusinessType.RESTAURANT;
 
   @ApiPropertyOptional({ example: 'https://example.com/main-image.png' })
   mainImage?: string;

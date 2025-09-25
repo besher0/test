@@ -9,9 +9,14 @@ import {
 @Injectable()
 export class RestaurantGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<{ user?: { userType?: string } }>();
+    const request = context
+      .switchToHttp()
+      .getRequest<{ user?: { userType?: string } }>();
     const user = request.user;
-    if (!user || user.userType !== 'restaurant') {
+    if (
+      !user ||
+      (user.userType !== 'restaurant' && user.userType !== 'store')
+    ) {
       throw new ForbiddenException(
         'Only restaurant owners can perform this action',
       );

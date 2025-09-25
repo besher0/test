@@ -23,6 +23,11 @@ import { RestaurantImage } from './restaurant-image.entity';
 import { RestaurantVideo } from './restaurant-video.entity';
 import { DeliveryLocation } from './delivery-location.entity';
 
+export enum BusinessType {
+  RESTAURANT = 'restaurant',
+  STORE = 'store',
+}
+
 @Entity()
 export class Restaurant {
   @ApiProperty({
@@ -93,6 +98,13 @@ export class Restaurant {
   @ApiProperty({ example: 'من الساعة 12 ظهراً إلى 9 مساءً' })
   @Column({ type: 'varchar', nullable: true })
   workingHours: string | null;
+
+  @Column({
+    type: 'enum',
+    enum: BusinessType,
+    default: BusinessType.RESTAURANT,
+  })
+  type: BusinessType;
 
   @ApiProperty({ description: 'Country', type: () => Country })
   @ManyToOne(() => Country, (country) => country.restaurants, {

@@ -87,11 +87,7 @@ return {
     });
 
   return {
-    restaurants: likes.map((like) => ({
-      id: like.restaurant.id,
-      name: like.restaurant.name,
-      imageUrl: like.restaurant.logo_url || undefined,
-    })),
+    restaurants: likes.map((like) => (like.restaurant )),
   };
 }
 

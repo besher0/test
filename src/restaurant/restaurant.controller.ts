@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { RestaurantService } from './restaurant.service';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
@@ -24,10 +25,9 @@ import {
   ApiConsumes,
   ApiOkResponse,
   ApiBearerAuth,
-  ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { Restaurant } from './restaurant.entity';
+import { BusinessType, Restaurant } from './restaurant.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
@@ -47,7 +47,6 @@ export class RestaurantController {
     private readonly restaurantService: RestaurantService,
     private readonly filterService: FilterService,
   ) {}
-  //eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjNkODhkNWQxLTY0ZmMtNDkzMy1hYzY2LTU1MTEwZjJjNzNmNSIsImVtYWlsIjoiam9obi5kb2VAZWNjeGFtcGxlLmNvbSIsInVzZXJUeXBlIjoicmVzdGF1cmFudCIsImlhdCI6MTc1Nzg1NTA1MSwiZXhwIjoxNzU3ODk4MjUxfQ.4lP0X4Kz-fynxF0QdJsYz8-DDsIJR0Kks620GroZq7w"
   @Post()
   @UseGuards(JwtAuthGuard, RestaurantGuard)
   @ApiBearerAuth()
@@ -55,30 +54,17 @@ export class RestaurantController {
   @ApiConsumes('multipart/form-data') // 👈 مهم جداً
   @UseInterceptors(FileInterceptor('file'))
   @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', example: 'Italiano Pizza' },
-        location: { type: 'string', example: '123 Main Street, New York' },
-        Identity: { type: 'string', example: 'RESTAURANT-12345' },
-        file: {
-          type: 'string',
-          format: 'binary', // 👈 هذا اللي يخلي Swagger يطلع زر Choose File
-        },
-      },
-      required: ['name', 'location'],
-    },
+    type: CreateRestaurantDto,
   })
-  @ApiOkResponse({
-    type: Restaurant,
-    description: 'Restaurant created successfully',
-  })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
+  @ApiOkResponse({ type: Restaurant })
   create(
     @Body() dto: CreateRestaurantDto,
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() currentUser: User,
+    @Query('type') type: BusinessType,
   ) {
-    return this.restaurantService.create(dto, currentUser, file);
+    return this.restaurantService.create(dto, currentUser, file, type);
   }
 
   //   @Get()
@@ -122,64 +108,49 @@ export class RestaurantController {
     example: 'سوري',
     description: 'كلمة للبحث داخل اسم الدولة',
   })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
   getCountries(
+    @Query('type') type: BusinessType,
     @Query('category') category?: string,
     @Query('search') search?: string,
   ) {
-    return this.filterService.getCountries(category, search);
+    return this.filterService.getCountries(type, category, search);
   }
 
   @ApiBearerAuth()
   @UseGuards(OptionalAuthGuard)
   @Get('meals')
   @ApiOperation({ summary: 'جلب قائمة الوجبات مع الفلترة والبحث' })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
   @ApiQuery({ name: 'category', required: false, example: 'لحوم' })
   @ApiQuery({ name: 'search', required: false, example: 'برغر' })
   getMeals(
-    @CurrentUser() user?: User, // 👈 من الـ JwtAuthGuard
+    @CurrentUser() user?: User,
+    @Query('type') type?: BusinessType,
     @Query('category') category?: string,
     @Query('search') search?: string,
   ) {
-    return this.filterService.getMeals(user?.id, category, search);
+    if (!type) {
+      throw new BadRequestException(
+        'type is required and must be restaurant or store',
+      );
+    }
+    return this.filterService.getMeals(type, user?.id, category, search);
   }
 
   @Get(':id')
-  @UseGuards(OptionalAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get a restaurant by ID' })
-  @ApiOkResponse({
-    type: Restaurant,
-    description: 'Restaurant details',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Success',
-    schema: {
-      example: {
-        id: '33333333-3333-4333-8333-333333333333',
-        name: 'Italiano Pizza',
-        location: '123 Main Street, New York',
-        ownerId: '11111111-1111-4111-8111-111111111111',
-        categoryId: '22222222-2222-4222-8222-222222222222',
-        averageRating: 4.7,
-        createdAt: '2025-09-13T10:00:00.000Z',
-        updatedAt: '2025-09-13T10:00:00.000Z',
-      },
-    },
-  })
-  @ApiNotFoundResponse({
-    description: 'Restaurant not found',
-    schema: {
-      example: {
-        statusCode: 404,
-        message: 'Restaurant not found',
-        error: 'Not Found',
-      },
-    },
-  })
-  findOne(@Param('id') id: string, @CurrentUser() user: User) {
-    return this.restaurantService.findOne(id, user);
+  @ApiOperation({ summary: 'Get a restaurant or store by ID' })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
+  @ApiOkResponse({ type: Restaurant })
+  @ApiNotFoundResponse({ description: 'Not found' })
+  findOne(
+    @Param('id') id: string,
+    @Query('type') type: BusinessType,
+    @CurrentUser() user?: User,
+  ) {
+    return this.restaurantService.findOne(id, type, user);
   }
+  //
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -238,215 +209,148 @@ export class RestaurantController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a restaurant' })
-  @ApiOkResponse({
-    description: 'Restaurant deleted successfully',
-    schema: {
-      example: {
-        message: 'Restaurant deleted successfully',
-        id: '33333333-3333-4333-8333-333333333333',
-      },
-    },
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Success',
-    schema: {
-      example: {
-        id: '33333333-3333-4333-8333-333333333333',
-        name: 'Italiano Pizza',
-        location: '123 Main Street, New York',
-        ownerId: '11111111-1111-4111-8111-111111111111',
-        categoryId: '22222222-2222-4222-8222-222222222222',
-        averageRating: 4.7,
-      },
-    },
-  })
-  @ApiNotFoundResponse({
-    description: 'Restaurant not found',
-    schema: {
-      example: {
-        statusCode: 404,
-        message: 'Restaurant not found',
-        error: 'Not Found',
-      },
-    },
-  })
-  remove(@Param('id') id: string) {
-    return this.restaurantService.remove(id);
+  @ApiOperation({ summary: 'Delete a restaurant/store' })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
+  @ApiOkResponse({ schema: { example: { message: 'Deleted successfully' } } })
+  remove(@Param('id') id: string, @Query('type') type: BusinessType) {
+    return this.restaurantService.remove(id, type);
   }
 
   // restaurant.controller.ts
   @Get(':id/profile')
-  @ApiParam({ name: 'id', type: String, description: 'معرف المطعم' })
-  async getProfile(@Param('id') id: string) {
-    return this.restaurantService.getRestaurantProfile(id);
+  @ApiOperation({ summary: 'Get restaurant/store profile' })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
+  @ApiOkResponse({ type: RestaurantProfileDto })
+  getProfile(@Param('id') id: string, @Query('type') type: BusinessType) {
+    return this.restaurantService.getRestaurantProfile(id, type);
   }
 
   @ApiBearerAuth()
   @UseGuards(OptionalAuthGuard)
-  @Get(':restaurantId/upperProfile')
+  @Get(':id/upperProfile')
+  @ApiOperation({ summary: 'Get upper profile for restaurant/store' })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
   @ApiOkResponse({ type: RestaurantProfileDto })
-  getRestaurantProfile(
-    @Param('restaurantId') restaurantId: string,
+  getUpperProfile(
+    @Param('id') id: string,
+    @Query('type') type: BusinessType,
     @CurrentUser() user?: User,
   ) {
-    return this.restaurantService.getRestaurantUpperProfile(
-      restaurantId,
-      user?.id,
-    );
+    return this.restaurantService.getRestaurantUpperProfile(id, type, user?.id);
   }
 
   @Get(':id/reviews')
-  @ApiOperation({
-    summary: 'Get all reviews of a restaurant (ratings + avg + count)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'List of reviews with avg rating and count',
-  })
-  async getRestaurantReviews(@Param('id') id: string) {
-    return this.restaurantService.getRestaurantReviews(id);
+  @ApiOperation({ summary: 'Get reviews for restaurant/store' })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
+  getReviews(@Param('id') id: string, @Query('type') type: BusinessType) {
+    return this.restaurantService.getRestaurantReviews(id, type);
   }
 
   @Get(':id/dishes')
+  @ApiOperation({ summary: 'Get dishes (restaurant) or products (store)' })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
   @ApiQuery({ name: 'categoryId', required: false })
-  async getRestaurantDishes(
-    @Param('id') restaurantId: string,
+  getDishes(
+    @Param('id') id: string,
+    @Query('type') type: BusinessType,
     @Query('categoryId') categoryId?: string,
   ) {
-    return this.restaurantService.getRestaurantDishes(restaurantId, categoryId);
-  }
-  @ApiOperation({ summary: 'Get all images of a restaurant' })
-  @ApiParam({
-    name: 'restaurantId',
-    type: String,
-    description: 'Restaurant ID',
-  })
-  @Get(':restaurantId/images')
-  getImages(@Param('restaurantId') restaurantId: string) {
-    return this.restaurantService.getImages(restaurantId);
+    if (!type) {
+      throw new BadRequestException(
+        'type is required and must be restaurant or store',
+      );
+    }
+    return this.restaurantService.getRestaurantDishes(id, type, categoryId);
   }
 
-  @ApiOperation({ summary: 'Upload a new image for a restaurant' })
+  @Get(':id/images')
+  @ApiOperation({ summary: 'Get restaurant/store images' })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
+  getImages(@Param('id') id: string, @Query('type') type: BusinessType) {
+    return this.restaurantService.getImages(id, type);
+  }
+
+  @Post(':id/images')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiParam({
-    name: 'restaurantId',
-    type: String,
-    description: 'Restaurant ID',
-  })
+  @ApiOperation({ summary: 'Upload a new image' })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: { type: 'string', format: 'binary' },
-      },
-    },
-  })
-  @Post(':restaurantId/images')
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
   @UseInterceptors(FileInterceptor('file'))
   addImage(
-    @Param('restaurantId') restaurantId: string,
+    @Param('id') id: string,
     @CurrentUser() user: User,
     @UploadedFile() file: Express.Multer.File,
+    @Query('type') type: BusinessType,
   ) {
-    return this.restaurantService.addImage(restaurantId, user.id, file);
+    return this.restaurantService.addImage(id, type, user.id, file);
   }
 
-  @ApiOperation({ summary: 'Delete an image of a restaurant' })
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @ApiParam({ name: 'imageId', type: String, description: 'Image ID' })
   @Delete('images/:imageId')
-  deleteImage(@Param('imageId') imageId: string, @CurrentUser() user: User) {
-    return this.restaurantService.deleteImage(imageId, user.id);
-  }
-
-  @ApiOperation({ summary: 'Get all videos of a restaurant' })
-  @ApiParam({
-    name: 'restaurantId',
-    type: String,
-    description: 'Restaurant ID',
-  })
-  @Get(':restaurantId/videos')
-  getVideos(@Param('restaurantId') restaurantId: string) {
-    return this.restaurantService.getVideos(restaurantId);
-  }
-
-  @ApiOperation({ summary: 'Upload a new video for a restaurant' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiParam({
-    name: 'restaurantId',
-    type: String,
-    description: 'Restaurant ID',
-  })
+  @ApiOperation({ summary: 'Delete image' })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
+  deleteImage(
+    @Param('imageId') imageId: string,
+    @CurrentUser() user: User,
+    @Query('type') type: BusinessType,
+  ) {
+    return this.restaurantService.deleteImage(imageId, type, user.id);
+  }
+
+  @Get(':id/videos')
+  @ApiOperation({ summary: 'Get restaurant/store videos' })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
+  getVideos(@Param('id') id: string, @Query('type') type: BusinessType) {
+    return this.restaurantService.getVideos(id, type);
+  }
+
+  @Post(':id/videos')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Upload a new video' })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: { type: 'string', format: 'binary' },
-      },
-    },
-  })
-  @Post(':restaurantId/videos')
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
   @UseInterceptors(FileInterceptor('file'))
   addVideo(
-    @Param('restaurantId') restaurantId: string,
+    @Param('id') id: string,
     @CurrentUser() user: User,
     @UploadedFile() file: Express.Multer.File,
+    @Query('type') type: BusinessType,
   ) {
-    return this.restaurantService.addVideo(restaurantId, user.id, file);
+    return this.restaurantService.addVideo(id, type, user.id, file);
   }
 
-  @ApiOperation({ summary: 'Delete a video of a restaurant' })
+  @Delete('videos/:videoId')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiParam({ name: 'videoId', type: String, description: 'Video ID' })
-  @Delete('videos/:videoId')
-  deleteVideo(@Param('videoId') videoId: string, @CurrentUser() user: User) {
-    return this.restaurantService.deleteVideo(videoId, user.id);
+  @ApiOperation({ summary: 'Delete video' })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
+  deleteVideo(
+    @Param('videoId') videoId: string,
+    @CurrentUser() user: User,
+    @Query('type') type: BusinessType,
+  ) {
+    return this.restaurantService.deleteVideo(videoId, type, user.id);
   }
 
   @ApiBearerAuth()
   @UseGuards(OptionalAuthGuard)
   @Get()
-  @ApiOperation({ summary: 'جلب قائمة المطاعم مع الفلترة والبحث' })
-  @ApiQuery({
-    name: 'category',
-    required: false,
-    example: 'شعبي',
-    description: 'اسم التصنيف (Category) للمطاعم',
+  @ApiOperation({
+    summary: 'List restaurants or stores with filtering & search',
   })
-  @ApiQuery({
-    name: 'search',
-    required: false,
-    example: 'مطعم كذا',
-    description: 'كلمة للبحث داخل اسم المطعم',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'قائمة المطاعم بنجاح',
-    schema: {
-      example: [
-        {
-          id: 1,
-          name: 'مطعم كذا',
-          category: { id: 7, name: 'شعبي' },
-          isLiked: true,
-        },
-      ],
-    },
-  })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
+  @ApiQuery({ name: 'category', required: false })
+  @ApiQuery({ name: 'search', required: false })
   getRestaurants(
+    @Query('type') type: BusinessType,
     @CurrentUser() user: User,
     @Query('category') category?: string,
     @Query('search') search?: string,
   ) {
-    return this.filterService.getRestaurants(user?.id, category, search);
+    return this.filterService.getRestaurants(type, user?.id, category, search);
   }
 }
 

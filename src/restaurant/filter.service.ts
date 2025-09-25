@@ -15,15 +15,20 @@ export class FilterService {
     private restaurantRepo: Repository<Restaurant>,
   ) {}
 
-  async getCountries(category?: string, search?: string) {
+  async getCountries(
+    type: 'restaurant' | 'store',
+    category?: string,
+    search?: string,
+  ) {
     const query = this.countryRepo
       .createQueryBuilder('country')
       .leftJoin('country.restaurants', 'restaurant')
       .leftJoin('restaurant.category', 'category')
+      .where('restaurant.type = :type', { type })
       .loadRelationCountAndMap(
         'country.restaurantsCount',
         'country.restaurants',
-      ); // 👈 أسهل
+      );
 
     if (category) {
       query.andWhere('category.name ILIKE :category', {
@@ -38,11 +43,17 @@ export class FilterService {
     return query.getMany();
   }
 
-  async getMeals(userId?: string, category?: string, search?: string) {
+  async getMeals(
+    type: 'restaurant' | 'store',
+    userId?: string,
+    category?: string,
+    search?: string,
+  ) {
     const query = this.mealRepo
       .createQueryBuilder('meal')
       .leftJoinAndSelect('meal.category', 'category')
-      .leftJoinAndSelect('meal.restaurant', 'restaurant');
+      .leftJoinAndSelect('meal.restaurant', 'restaurant')
+      .where('restaurant.type = :type', { type });
 
     if (category) {
       query.andWhere('category.name ILIKE :category', {
@@ -74,10 +85,16 @@ export class FilterService {
     }));
   }
 
-  async getRestaurants(userId?: string, category?: string, search?: string) {
+  async getRestaurants(
+    type: 'restaurant' | 'store',
+    userId?: string,
+    category?: string,
+    search?: string,
+  ) {
     const query = this.restaurantRepo
       .createQueryBuilder('restaurant')
-      .leftJoinAndSelect('restaurant.category', 'category');
+      .leftJoinAndSelect('restaurant.category', 'category')
+      .where('restaurant.type = :type', { type });
 
     if (category) {
       query.andWhere('category.name ILIKE :category', {

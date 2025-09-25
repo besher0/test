@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Restaurant } from './restaurant.entity';
+import { BusinessType, Restaurant } from './restaurant.entity';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import { User } from 'src/user/user.entity';
@@ -74,13 +74,15 @@ export class RestaurantService {
     dto: CreateRestaurantDto,
     currentUser: User,
     file?: Express.Multer.File,
+    type?: BusinessType,
   ) {
     console.log(currentUser);
+    if (!type || !['restaurant', 'store'].includes(type)) {
+      throw new NotFoundException('Type must be restaurant or store');
+    }
 
-    if (currentUser.userType !== 'restaurant') {
-      throw new NotFoundException(
-        'Only restaurant owners can create restaurants',
-      );
+    if (!['restaurant', 'store'].includes(currentUser.userType)) {
+      throw new NotFoundException('Only owners can create restaurants/stores');
     }
 
     let category: Category | null = null;
@@ -111,6 +113,7 @@ export class RestaurantService {
       ...dto,
       owner,
       logo_url,
+      type,
     });
 
     const saved = await this.restaurantRepo.save(restaurant);
@@ -120,9 +123,11 @@ export class RestaurantService {
       owner: this.mapOwner(owner), // ✅ مالك كامل
     };
   }
+  //
 
-  async findAll() {
+  async findAll(type: BusinessType) {
     const restaurants = await this.restaurantRepo.find({
+      where: { type },
       relations: ['owner', 'category'], // ✅ بس
     });
 
@@ -138,14 +143,15 @@ export class RestaurantService {
       owner: this.mapOwner(r.owner), // ✅ خلي المالك كامل
     }));
   }
+  //
 
-  async findOne(id: string, user?: User) {
+  async findOne(id: string, type: BusinessType, user?: User) {
     const restaurant = await this.restaurantRepo.findOne({
-      where: { id },
+      where: { id, type },
       relations: ['owner', 'category', 'likes', 'likes.user'],
     });
 
-    if (!restaurant) throw new NotFoundException('Restaurant not found');
+    if (!restaurant) throw new NotFoundException(`${type} not found`);
 
     return {
       id: restaurant.id,
@@ -162,6 +168,7 @@ export class RestaurantService {
         : false,
     };
   }
+  //
 
   async updateRestaurant(
     id: string,
@@ -220,14 +227,20 @@ export class RestaurantService {
     return this.restaurantRepo.save(restaurant);
   }
 
-  async remove(id: string): Promise<void> {
-    const restaurant = await this.restaurantRepo.findOne({ where: { id } });
-    if (!restaurant) throw new NotFoundException('Restaurant not found');
+  async remove(id: string, type: BusinessType): Promise<void> {
+    const restaurant = await this.restaurantRepo.findOne({
+      where: { id, type },
+    });
+    if (!restaurant) throw new NotFoundException(`${type} not found`);
     await this.restaurantRepo.remove(restaurant);
   }
 
-  async findAllSortedByRating(order: 'ASC' | 'DESC' = 'DESC') {
+  async findAllSortedByRating(
+    type: BusinessType,
+    order: 'ASC' | 'DESC' = 'DESC',
+  ) {
     const restaurants = await this.restaurantRepo.find({
+      where: { type },
       order: { averageRating: order },
       relations: ['meals', 'owner', 'category'],
       select: {
@@ -256,15 +269,13 @@ export class RestaurantService {
     }));
   }
 
-  async getRestaurantProfile(id: string) {
+  async getRestaurantProfile(id: string, type: BusinessType) {
     const restaurant = await this.restaurantRepo.findOne({
-      where: { id },
+      where: { id, type },
       relations: ['country', 'category'],
     });
 
-    if (!restaurant) {
-      throw new NotFoundException('Restaurant not found');
-    }
+    if (!restaurant) throw new NotFoundException(`${type} not found`);
 
     return {
       id: restaurant.id,
@@ -292,13 +303,14 @@ export class RestaurantService {
 
   async getRestaurantUpperProfile(
     restaurantId: string,
+    type: BusinessType,
     userId?: string,
   ): Promise<RestaurantProfileDto> {
     const restaurant = await this.restaurantRepo.findOne({
-      where: { id: restaurantId },
+      where: { id: restaurantId, type },
     });
 
-    if (!restaurant) throw new NotFoundException('Restaurant not found');
+    if (!restaurant) throw new NotFoundException(`${type} not found`);
 
     // عدد المتابعين
     const followersCount = await this.followRepo.count({
@@ -321,23 +333,20 @@ export class RestaurantService {
     };
   }
 
-  async getRestaurantReviews(restaurantId: string) {
+  async getRestaurantReviews(restaurantId: string, type: BusinessType) {
     const restaurant = await this.restaurantRepo.findOne({
-      where: { id: restaurantId },
+      where: { id: restaurantId, type },
       select: ['id', 'name', 'averageRating'],
     });
 
-    if (!restaurant) {
-      throw new Error('Restaurant not found');
-    }
-    // نجيب كل التقييمات مع المستخدمين
+    if (!restaurant) throw new NotFoundException(`${type} not found`);
+
     const ratings = await this.ratingRepo.find({
       where: { restaurant: { id: restaurantId } },
       relations: ['user'],
       order: { createdAt: 'DESC' },
     });
 
-    // نجهّز الرد
     return {
       avgRating: restaurant.averageRating,
       totalReviewers: ratings.length,
@@ -357,12 +366,17 @@ export class RestaurantService {
     };
   }
 
-  async getRestaurantDishes(restaurantId: string, categoryId?: string) {
+  async getRestaurantDishes(
+    restaurantId: string,
+    type: 'restaurant' | 'store',
+    categoryId?: string,
+  ) {
     const query = this.mealRepo
       .createQueryBuilder('meal')
       .leftJoinAndSelect('meal.restaurant', 'restaurant')
       .leftJoinAndSelect('meal.category', 'category')
-      .where('meal.restaurantId = :restaurantId', { restaurantId });
+      .where('meal.restaurantId = :restaurantId', { restaurantId })
+      .andWhere('restaurant.type = :type', { type });
 
     if (categoryId) {
       query.andWhere('meal.categoryId = :categoryId', { categoryId });
@@ -372,31 +386,32 @@ export class RestaurantService {
     return { meals };
   }
 
-  async getImages(restaurantId: string) {
+  async getImages(restaurantId: string, type: BusinessType) {
     const restaurant = await this.restaurantRepo.findOne({
-      where: { id: restaurantId },
+      where: { id: restaurantId, type },
       relations: ['images'],
     });
-    if (!restaurant) throw new NotFoundException('Restaurant not found');
+    if (!restaurant) throw new NotFoundException(`${type} not found`);
     return { images: restaurant.images };
   }
 
   async addImage(
     restaurantId: string,
+    type: BusinessType,
     userId: string,
     file: Express.Multer.File,
   ) {
     const restaurant = await this.restaurantRepo.findOne({
-      where: { id: restaurantId },
+      where: { id: restaurantId, type },
       relations: ['owner'],
     });
-    if (!restaurant) throw new NotFoundException('Restaurant not found');
+    if (!restaurant) throw new NotFoundException(`${type} not found`);
     if (restaurant.owner.id !== userId)
       throw new ForbiddenException('Not allowed');
 
     const uploadResult = await this.cloudinaryService.uploadImage(
       file,
-      'restaurants/images',
+      `${restaurant.type}s/images`,
     );
     const newImage = this.imageRepo.create({
       url: uploadResult.secure_url,
@@ -405,12 +420,17 @@ export class RestaurantService {
     return this.imageRepo.save(newImage);
   }
 
-  async deleteImage(imageId: string, userId: string) {
+  async deleteImage(
+    imageId: string,
+    type: 'restaurant' | 'store',
+    userId: string,
+  ) {
     const image = await this.imageRepo.findOne({
       where: { id: imageId },
       relations: ['restaurant', 'restaurant.owner'],
     });
-    if (!image) throw new NotFoundException('Image not found');
+    if (!image || image.restaurant.type !== type)
+      throw new NotFoundException(`${type} image not found`);
     if (image.restaurant.owner.id !== userId)
       throw new ForbiddenException('Not allowed');
 
@@ -418,31 +438,32 @@ export class RestaurantService {
     return { success: true };
   }
 
-  async getVideos(restaurantId: string) {
+  async getVideos(restaurantId: string, type: BusinessType) {
     const restaurant = await this.restaurantRepo.findOne({
-      where: { id: restaurantId },
+      where: { id: restaurantId, type },
       relations: ['videos'],
     });
-    if (!restaurant) throw new NotFoundException('Restaurant not found');
+    if (!restaurant) throw new NotFoundException(`${type} not found`);
     return { videos: restaurant.videos };
   }
 
   async addVideo(
     restaurantId: string,
+    type: BusinessType,
     userId: string,
     file: Express.Multer.File,
   ) {
     const restaurant = await this.restaurantRepo.findOne({
-      where: { id: restaurantId },
+      where: { id: restaurantId, type },
       relations: ['owner'],
     });
-    if (!restaurant) throw new NotFoundException('Restaurant not found');
+    if (!restaurant) throw new NotFoundException(`${type} not found`);
     if (restaurant.owner.id !== userId)
       throw new ForbiddenException('Not allowed');
 
     const uploadResult = await this.cloudinaryService.uploadVideo(
       file,
-      'restaurants/videos',
+      `${restaurant.type}s/videos`,
     );
     const thumbnailUrl = this.cloudinaryService.generateThumbnail(
       uploadResult.public_id,
@@ -456,12 +477,17 @@ export class RestaurantService {
     return this.videoRepo.save(newVideo);
   }
 
-  async deleteVideo(videoId: string, userId: string) {
+  async deleteVideo(
+    videoId: string,
+    type: 'restaurant' | 'store',
+    userId: string,
+  ) {
     const video = await this.videoRepo.findOne({
       where: { id: videoId },
       relations: ['restaurant', 'restaurant.owner'],
     });
-    if (!video) throw new NotFoundException('Video not found');
+    if (!video || video.restaurant.type !== type)
+      throw new NotFoundException(`${type} video not found`);
     if (video.restaurant.owner.id !== userId)
       throw new ForbiddenException('Not allowed');
 
@@ -507,6 +533,3 @@ export class RestaurantService {
     });
   }
 }
-//316dd92a-bae2-4849-9eb5-a62447b4433a
-//633288b7-dff1-4f5b-b88d-cf884d4da5c4
-//720c1953-efdf-4ff4-8042-4967c35dd3f1
