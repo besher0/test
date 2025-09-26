@@ -20,9 +20,7 @@ import {
   ApiConsumes,
 } from '@nestjs/swagger';
 import { Country } from './county.entity';
-import {
-  FileFieldsInterceptor,
-} from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Countries')
 @Controller('countries')

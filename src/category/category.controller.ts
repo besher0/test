@@ -9,6 +9,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,6 +17,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from '../category/dto/create-category.dto';
@@ -28,6 +30,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { videoStorage } from 'src/cloudinary.video/video-upload.storage';
+import { BusinessType } from 'src/restaurant/restaurant.entity';
 
 class FoodCategoryDto {
   name: string;
@@ -57,17 +60,36 @@ export class CategoryController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a category' })
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Create a category (with optional image)' })
   @ApiResponse({ status: 201, description: 'Category created' })
-  create(@Body() createCategoryDto: CreateCategoryDto) {
-    return this.categoryService.create(createCategoryDto);
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        type: { type: 'string', enum: ['restaurant', 'store'] },
+        description: { type: 'string' },
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  create(
+    @Body() createCategoryDto: CreateCategoryDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.categoryService.create(createCategoryDto, file);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all categories' })
+  @ApiOperation({ summary: 'Get all categories (filter by type)' })
   @ApiResponse({ status: 200, description: 'List of categories' })
-  findAll() {
-    return this.categoryService.findAll();
+  findAll(@Query('type') type?: BusinessType) {
+    return this.categoryService.findAll(type);
   }
 
   // @Get(':userId')
@@ -124,6 +146,6 @@ export class CategoryController {
     @Param('name') name: string,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<{ message: string; imageUrl: string }> {
-    return await this.categoryService.uploadFoodCategoryImage(name, file);
+    return await this.categoryService.uploadCategoryImage(name, file);
   }
 }

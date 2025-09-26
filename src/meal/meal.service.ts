@@ -1,13 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Meal } from './meal.entity';
 import { CreateMealDto } from './dto/create-meal.dto';
 import { UpdateMealDto } from './dto/update-meal.dto';
-import { Restaurant } from 'src/restaurant/restaurant.entity';
+import { BusinessType, Restaurant } from 'src/restaurant/restaurant.entity';
 import { Category } from 'src/category/category.entity';
 import { User } from 'src/user/user.entity';
 import { Country } from 'src/country/county.entity';
@@ -63,12 +60,19 @@ export class MealService {
     return meals;
   }
 
-  async create(dto: CreateMealDto, file?: Express.Multer.File): Promise<Meal> {
+  async create(
+    dto: CreateMealDto,
+    type: BusinessType,
+    file?: Express.Multer.File,
+  ): Promise<Meal> {
     const restaurant = await this.restaurantRepo.findOne({
-      where: { id: dto.restaurantId },
+      where: { id: dto.restaurantId, type },
     });
-    if (!restaurant) throw new NotFoundException('Restaurant not found');
-
+    if (!restaurant) {
+      throw new NotFoundException(
+        `Restaurant/Store with id ${dto.restaurantId} and type ${dto.type} not found`,
+      );
+    }
     let category: Category | undefined;
     if (dto.categoryId) {
       const foundCategory = await this.categoryRepo.findOne({
@@ -94,6 +98,7 @@ export class MealService {
     }
     const meal = this.mealRepo.create({
       ...dto,
+      type,
       restaurant,
       category,
       country,
@@ -103,8 +108,9 @@ export class MealService {
     return this.mealRepo.save(meal);
   }
 
-  async findAll(user: User): Promise<any[]> {
+  async findAll(user: User, type: BusinessType): Promise<any[]> {
     const meals = await this.mealRepo.find({
+      where: { type },
       relations: ['restaurant', 'category', 'likes'],
     });
 
@@ -126,9 +132,9 @@ export class MealService {
     }));
   }
 
-  async findOne(id: string, user: User): Promise<any> {
+  async findOne(id: string, user: User, type: BusinessType): Promise<any> {
     const meal = await this.mealRepo.findOne({
-      where: { id },
+      where: { id, type },
       relations: ['restaurant', 'category', 'likes'],
     });
 
@@ -156,10 +162,26 @@ export class MealService {
     id: string,
     dto: UpdateMealDto,
     user: User, // ✅ إضافة باراميتر المستخدم
+    type: BusinessType,
     file?: Express.Multer.File,
   ): Promise<Meal> {
-    const meal = await this.findOne(id, user); // ✅ تمرير المستخدم هنا
+    const meal = await this.mealRepo.findOne({
+      where: { id, type },
+      relations: ['category', 'restaurant'],
+    });
+    if (!meal) throw new NotFoundException('Meal/Product not found');
 
+    if (dto.restaurantId) {
+      const restaurant = await this.restaurantRepo.findOne({
+        where: { id: dto.restaurantId, type: dto.type ?? type },
+      });
+      if (!restaurant) {
+        throw new NotFoundException(
+          `Restaurant/Store with id ${dto.restaurantId} not found`,
+        );
+      }
+      meal.restaurant = restaurant;
+    }
     if (dto.categoryId) {
       const category = await this.categoryRepo.findOneBy({
         id: dto.categoryId,
@@ -180,9 +202,9 @@ export class MealService {
   }
 
   // في دالة الحذف (remove)
-  async remove(id: string, user: User): Promise<void> {
-    // ✅ إضافة باراميتر المستخدم
-    const meal = await this.findOne(id, user); // ✅ تمرير المستخدم هنا
+  async remove(id: string, user: User, type: BusinessType): Promise<void> {
+    const meal = await this.mealRepo.findOne({ where: { id, type } });
+    if (!meal) throw new NotFoundException('Meal not found');
     await this.mealRepo.remove(meal);
   }
 }

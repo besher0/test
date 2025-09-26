@@ -6,8 +6,9 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  JoinColumn,
 } from 'typeorm';
-import { Restaurant } from 'src/restaurant/restaurant.entity';
+import { BusinessType, Restaurant } from 'src/restaurant/restaurant.entity';
 import { Category } from 'src/category/category.entity';
 import { Country } from 'src/country/county.entity'; // 👈 أضفنا الاستيراد
 import { ApiProperty } from '@nestjs/swagger';
@@ -38,9 +39,13 @@ export class Meal {
   @Column({ nullable: true })
   preparationTime: string; // ⏱️ وقت التحضير
 
+  @Column({ type: 'enum', enum: ['restaurant', 'store'], nullable: true })
+  type: BusinessType;
+
   @ManyToOne(() => Restaurant, (restaurant) => restaurant.meals, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'restaurant_id' })
   restaurant: Restaurant;
 
   @ManyToOne(() => Category, (category) => category.meals, {

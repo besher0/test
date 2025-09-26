@@ -5,7 +5,9 @@ import {
   IsString,
   IsUUID,
   IsNumber,
+  IsEnum,
 } from 'class-validator';
+import { BusinessType } from 'src/restaurant/restaurant.entity';
 
 export class CreateMealDto {
   @ApiProperty({ example: 'كبسة لحم' })
@@ -33,7 +35,11 @@ export class CreateMealDto {
   @IsString()
   image_url?: string;
 
-  @ApiProperty({ example: 'uuid-restaurant-id' })
+  @ApiProperty({ enum: BusinessType, example: BusinessType.RESTAURANT })
+  @IsEnum(BusinessType)
+  type: BusinessType;
+
+  @ApiProperty({ description: 'Restaurant/Store ID' })
   @IsNotEmpty()
   @IsUUID()
   restaurantId: string;

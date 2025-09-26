@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { User } from '../user/user.entity';
-import { Restaurant } from 'src/restaurant/restaurant.entity';
+import { BusinessType, Restaurant } from 'src/restaurant/restaurant.entity';
 import { Meal } from 'src/meal/meal.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -20,6 +20,10 @@ export class Category {
   @ApiProperty({ example: 'https://example.com/image.jpg' })
   @Column({ name: 'image_url', nullable: true })
   image_url: string;
+
+  @ApiProperty({ enum: BusinessType, example: BusinessType.RESTAURANT })
+  @Column({ type: 'enum', enum: BusinessType, nullable: true })
+  type: BusinessType;
 
   @OneToMany(() => User, (user) => user.favoriteFood)
   user: User;

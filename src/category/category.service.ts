@@ -1,10 +1,11 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Category } from '../category/category.entity';
 import { CreateCategoryDto } from '../category/dto/create-category.dto';
 import { UpdateCategoryDto } from '../category/dto/update-category.dto';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { BusinessType } from 'src/restaurant/restaurant.entity';
 
 @Injectable()
 export class CategoryService {
@@ -14,20 +15,39 @@ export class CategoryService {
     private cloudinaryService: CloudinaryService,
   ) {}
 
-  create(createCategoryDto: CreateCategoryDto): Promise<Category> {
-    const category = this.categoryRepository.create(createCategoryDto);
-    return this.categoryRepository.save(category);
+  async create(
+    createCategoryDto: CreateCategoryDto,
+    file?: Express.Multer.File,
+  ): Promise<Category> {
+    let imageUrl: string | undefined;
+
+    if (file) {
+      const result = await this.cloudinaryService.uploadImage(
+        file,
+        `categories/${createCategoryDto.name}`,
+      );
+      imageUrl = result.secure_url;
+    }
+
+    const category = this.categoryRepository.create({
+      ...createCategoryDto,
+      image_url: imageUrl,
+    });
+
+    return await this.categoryRepository.save(category);
   }
 
-  async findAll() {
+  async findAll(type?: BusinessType) {
     const categories = await this.categoryRepository.find({
-      select: ['id', 'name', 'image_url'],
+      where: type ? { type } : {},
+      select: ['id', 'name', 'image_url', 'type'],
     });
 
     return {
       category: categories.map((c) => ({
         id: c.id,
         name: c.name,
+        type: c.type,
         imageUrl: c.image_url || undefined,
       })),
     };
@@ -98,46 +118,22 @@ export class CategoryService {
     };
   }
 
-  async uploadFoodCategoryImage(
-    name: string,
+  async uploadCategoryImage(
+    id: string,
     file: Express.Multer.File,
   ): Promise<{ message: string; imageUrl: string }> {
-    // قائمة الأصناف المسموح بها
-    const allowedCategories = [
-      'لحمة',
-      'رز',
-      'مشروبات',
-      'حلويات',
-      'برغر',
-      'معكرونة',
-    ];
-    if (!allowedCategories.includes(name)) {
-      throw new BadRequestException(
-        `Category ${name} is not a valid favorite food category`,
-      );
-    }
+    const category = await this.findOne(id);
 
-    // رفع الصورة إلى Cloudinary
     const result = await this.cloudinaryService.uploadImage(
       file,
-      `food_categories/${name}`,
+      `categories/${category.name}`,
     );
 
-    // تحديث أو إنشاء الصنف في قاعدة البيانات
-    let category = await this.categoryRepository.findOne({ where: { name } });
-    if (!category) {
-      category = this.categoryRepository.create({
-        name,
-        description: `Favorite food category: ${name}`,
-        image_url: result.secure_url,
-      });
-    } else {
-      category.image_url = result.secure_url;
-    }
+    category.image_url = result.secure_url;
     await this.categoryRepository.save(category);
 
     return {
-      message: `Image uploaded successfully for category ${name}`,
+      message: `Image uploaded successfully for category ${category.name}`,
       imageUrl: result.secure_url,
     };
   }
