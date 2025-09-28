@@ -1,8 +1,13 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { User } from '../user/user.entity';
-import { BusinessType, Restaurant } from 'src/restaurant/restaurant.entity';
+import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { Meal } from 'src/meal/meal.entity';
 import { ApiProperty } from '@nestjs/swagger';
+
+export enum BusinessType {
+  RESTAURANT = 'restaurant',
+  STORE = 'store',
+}
 
 @Entity('categories')
 export class Category {
@@ -21,8 +26,12 @@ export class Category {
   @Column({ name: 'image_url', nullable: true })
   image_url: string;
 
-  @ApiProperty({ enum: BusinessType, example: BusinessType.RESTAURANT })
-  @Column({ type: 'enum', enum: BusinessType, nullable: true })
+  @ApiProperty({ enum: BusinessType })
+  @Column({
+    type: 'enum',
+    enum: BusinessType,
+    enumName: 'business_type_enum',
+  })
   type: BusinessType;
 
   @OneToMany(() => User, (user) => user.favoriteFood)

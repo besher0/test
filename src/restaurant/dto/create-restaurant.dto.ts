@@ -1,7 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { BusinessType } from '../restaurant.entity';
-
+export enum BusinessType {
+  RESTAURANT = 'restaurant',
+  STORE = 'store',
+}
 export class CreateRestaurantDto {
   @ApiProperty({
     description: 'Restaurant name',

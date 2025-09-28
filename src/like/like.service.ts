@@ -5,7 +5,7 @@ import { Like } from './like.entity';
 import { IsNull, Not, Repository } from 'typeorm';
 import { User } from 'src/user/user.entity';
 import { Meal } from 'src/meal/meal.entity';
-import { Restaurant } from 'src/restaurant/restaurant.entity';
+import { BusinessType, Restaurant } from 'src/restaurant/restaurant.entity';
 import { Country } from 'src/country/county.entity';
 
 @Injectable()
@@ -17,28 +17,28 @@ export class LikeService {
   @InjectRepository(Country) private countryRepo: Repository<Country>,
   ) {}
 
-async toggleLike(user: User, targetId: string) {
+async toggleLike(user: User, targetId: string, type?: BusinessType) {
   let entity: Meal | Restaurant | Country | null = null;
-  let type: 'meal' | 'restaurant' | 'country' | null = null;
+  let targetType: 'meal' | 'restaurant' | 'country' | null = null;
 
   entity = await this.mealRepo.findOne({ where: { id: targetId } });
-  if (entity) type = 'meal';
+  if (entity) targetType = 'meal';
   if (!entity) {
     entity = await this.restRepo.findOne({ where: { id: targetId } });
-    if (entity) type = 'restaurant';
+    if (entity) targetType = 'restaurant';
   }
   if (!entity) {
     entity = await this.countryRepo.findOne({ where: { id: targetId } });
-    if (entity) type = 'country';
+    if (entity) targetType = 'country';
   }
-  if (!entity || !type) {
+  if (!entity || !targetType) {
     throw new NotFoundException('Entity not found');
   }
 
     const whereCondition: Record<string, any> = { user: { id: user.id } };
-  if (type === 'meal') whereCondition.meal = { id: (entity as Meal).id };
-  if (type === 'restaurant') whereCondition.restaurant = { id: (entity as Restaurant).id };
-  if (type === 'country') whereCondition.country = { id: (entity as Country).id };
+  if (targetType === 'meal') whereCondition.meal = { id: (entity as Meal).id };
+  if (targetType === 'restaurant') whereCondition.restaurant = { id: (entity as Restaurant).id };
+  if (targetType === 'country') whereCondition.country = { id: (entity as Country).id };
 
   const like = await this.likeRepo.findOne({ where: whereCondition });
 
@@ -48,22 +48,29 @@ async toggleLike(user: User, targetId: string) {
   }
 
   const createObj: Record<string, any> = { user };
-  if (type === 'meal') createObj.meal = entity as Meal;
-  if (type === 'restaurant') createObj.restaurant = entity as Restaurant;
-  if (type === 'country') createObj.country = entity as Country;
+    if (targetType === 'meal') {
+      createObj.meal = entity as Meal;
+      createObj.type = type;
+    }
+    if (targetType === 'restaurant') {
+      createObj.restaurant = entity as Restaurant;
+      createObj.type = type;
+    }
+    if (targetType === 'country') {
+      createObj.country = entity as Country;
+    }
 
   const newLike = this.likeRepo.create(createObj);
   await this.likeRepo.save(newLike);
   return { isLiked: true, message: `تم تسجيل الإعجاب بـ ${type} بنجاح` };
 }
 
-
-
-  async getMealLikes(user: User) {
+async getMealLikes(user: User, type: BusinessType) {
     const likes = await this.likeRepo.find({
       where: {
         user: { id: user.id },
         meal: { id: Not(IsNull()) },
+        type
       },
       relations: ['meal'],
     });
@@ -75,13 +82,14 @@ return {
     })),
 };
 
-  }
+}
 
-  async getRestaurantLikes(user: User) {
+async getRestaurantLikes(user: User, type: BusinessType) {
     const likes = await this.likeRepo.find({
       where: {
         user: { id: user.id },
         restaurant: { id: Not(IsNull()) },
+        type
       },
       relations: ['restaurant'],
     });
@@ -91,7 +99,7 @@ return {
   };
 }
 
-  async getCountryLikes(user: User) {
+async getCountryLikes(user: User) {
   const likes = await this.likeRepo.find({
     where: {
       user: { id: user.id },

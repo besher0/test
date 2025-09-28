@@ -31,8 +31,7 @@ export class Follow {
   @Column({
     type: 'enum',
     enum: BusinessType,
-    enumName: 'business_type_enum',
-    nullable: true,
+    default: BusinessType.RESTAURANT,
   })
   type: BusinessType;
 

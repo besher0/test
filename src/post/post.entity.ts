@@ -9,6 +9,10 @@ import {
 } from 'typeorm';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { PostReaction } from './post-reaction.entity';
+export enum BusinessType {
+  RESTAURANT = 'restaurant',
+  STORE = 'store',
+}
 
 @Entity('posts')
 export class Post {
@@ -23,6 +27,13 @@ export class Post {
 
   @Column({ nullable: true })
   thumbnailUrl?: string;
+
+  @Column({
+    type: 'enum',
+    enum: BusinessType,
+    default: BusinessType.RESTAURANT,
+  })
+  businessType: BusinessType;
 
   @ManyToOne(() => Restaurant, (restaurant) => restaurant.posts, {
     eager: true,

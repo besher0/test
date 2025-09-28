@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Rating } from './rating.entity';
-import { RatingReply } from './rating-reply.entity';
+import { BusinessType, RatingReply } from './rating-reply.entity';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { User } from 'src/user/user.entity';
 import { CreateRatingWithImageDto } from './dto/create-rating.dto';
@@ -33,11 +33,12 @@ export class RatingService {
     restaurantId: string,
     dto: CreateRatingWithImageDto,
     file?: Express.Multer.File,
+    businessType?: BusinessType,
   ): Promise<Rating> {
     const restaurant = await this.restaurantRepo.findOne({
-      where: { id: restaurantId },
+      where: { id: restaurantId, type: businessType },
     });
-    if (!restaurant) throw new NotFoundException('Restaurant not found');
+    if (!restaurant) throw new NotFoundException('Restaurant/Store not found');
 
     let imageUrl: string | null = null;
     if (file) {
@@ -52,6 +53,7 @@ export class RatingService {
     const rating = this.ratingRepo.create({
       user,
       restaurant,
+      type: businessType,
       score: dto.score,
       comment: dto.comment,
       imageUrl,
@@ -110,6 +112,17 @@ export class RatingService {
       relations: ['user', 'reply'],
       order: { createdAt: 'DESC' },
     });
+  }
+  async deleteRating(user: User, ratingId: string): Promise<void> {
+    const rating = await this.ratingRepo.findOne({
+      where: { id: ratingId },
+      relations: ['user'],
+    });
+    if (!rating) throw new NotFoundException('Rating not found');
+    if (rating.user.id !== user.id) {
+      throw new ForbiddenException('You can only delete your own rating');
+    }
+    await this.ratingRepo.remove(rating);
   }
 
   private async updateRestaurantAverageRating(

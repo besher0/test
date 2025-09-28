@@ -1,6 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-
+import { IsEnum } from 'class-validator';
+export enum BusinessType {
+  RESTAURANT = 'restaurant',
+  STORE = 'store',
+}
 export class CreateRatingWithImageDto {
+  @IsEnum(BusinessType)
+  type: BusinessType;
+
   @ApiProperty({ example: 5, description: 'Score of the rating (1-5)' })
   score: number;
 
@@ -13,5 +20,5 @@ export class CreateRatingWithImageDto {
     description: 'Optional image upload for the rating',
     required: false,
   })
-  file?: any; // Swagger يتعرف أنه ملف
+  file?: any;
 }

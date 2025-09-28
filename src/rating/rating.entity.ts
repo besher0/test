@@ -10,6 +10,11 @@ import { User } from 'src/user/user.entity';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { RatingReply } from './rating-reply.entity';
 
+export enum BusinessType {
+  RESTAURANT = 'restaurant',
+  STORE = 'store',
+}
+
 @Entity()
 export class Rating {
   @PrimaryGeneratedColumn('uuid')
@@ -25,6 +30,13 @@ export class Rating {
     onDelete: 'CASCADE',
   })
   restaurant: Restaurant;
+
+  @Column({
+    type: 'enum',
+    enum: BusinessType,
+    enumName: 'business_type_enum',
+  })
+  type: BusinessType;
 
   @Column({ type: 'int', width: 1 })
   score: number; // 1-5

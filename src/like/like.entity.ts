@@ -4,12 +4,18 @@ import {
   ManyToOne,
   CreateDateColumn,
   Unique,
+  Column,
 } from 'typeorm';
 import { User } from 'src/user/user.entity';
 import { Meal } from 'src/meal/meal.entity';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Country } from 'src/country/county.entity';
+
+export enum BusinessType {
+  RESTAURANT = 'restaurant',
+  STORE = 'store',
+}
 
 @Entity()
 @Unique(['user', 'meal'])
@@ -45,6 +51,14 @@ export class Like {
     onDelete: 'CASCADE',
   })
   country: Country;
+
+  @Column({
+    type: 'enum',
+    enum: BusinessType,
+    enumName: 'business_type_enum',
+    nullable: true,
+  })
+  type?: BusinessType;
 
   @ApiProperty({ example: '2025-09-14T12:34:56Z' })
   @CreateDateColumn()

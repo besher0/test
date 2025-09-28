@@ -11,7 +11,7 @@ import { User } from 'src/user/user.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { ReactToPostDto } from './dto/react-to-post.dto';
-import { Restaurant } from 'src/restaurant/restaurant.entity';
+import { BusinessType, Restaurant } from 'src/restaurant/restaurant.entity';
 
 @Injectable()
 export class PostService {
@@ -126,7 +126,7 @@ export class PostService {
   }
 
   // Get posts visible to user (here: all posts; you can filter by follows if needed)
-  async getPostsForUser(userId: string) {
+  async getPostsForUser(type: BusinessType, userId: string) {
     const posts = await this.postRepo.find({
       relations: [
         'restaurant',
@@ -134,6 +134,8 @@ export class PostService {
         'reactions',
         'reactions.user',
       ],
+      where: { businessType: type },
+
       order: { createdAt: 'DESC' },
     });
 

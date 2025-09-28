@@ -102,7 +102,7 @@ export class Restaurant {
   @Column({
     type: 'enum',
     enum: BusinessType,
-    default: BusinessType.RESTAURANT,
+    enumName: 'business_type_enum',
   })
   type: BusinessType;
 

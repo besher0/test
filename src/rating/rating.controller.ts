@@ -7,6 +7,8 @@ import {
   Get,
   UseInterceptors,
   UploadedFile,
+  Delete,
+  Query,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -14,10 +16,11 @@ import {
   ApiTags,
   ApiBearerAuth,
   ApiConsumes,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { RatingService } from './rating.service';
 import { Rating } from './rating.entity';
-import { RatingReply } from './rating-reply.entity';
+import { BusinessType, RatingReply } from './rating-reply.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
@@ -39,8 +42,15 @@ export class RatingController {
     summary: 'Add rating to a restaurant (with optional image upload)',
   })
   @ApiResponse({ status: 201, type: Rating })
+  @ApiQuery({
+    name: 'businessType',
+    enum: BusinessType,
+    required: true,
+    description: 'Business type (restaurant or store)',
+  })
   async addRating(
     @Param('restaurantId') restaurantId: string,
+    @Query('businessType') businessType: BusinessType,
     @Body() dto: CreateRatingWithImageDto,
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: User,
@@ -50,6 +60,7 @@ export class RatingController {
       restaurantId,
       dto,
       file,
+      businessType,
     );
   }
 
@@ -79,5 +90,15 @@ export class RatingController {
     @Param('restaurantId') restaurantId: string,
   ): Promise<Rating[]> {
     return this.ratingService.getRestaurantRatings(restaurantId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Delete(':ratingId')
+  async deleteRating(
+    @CurrentUser() user: User,
+    @Param('ratingId') ratingId: string,
+  ) {
+    return this.ratingService.deleteRating(user, ratingId);
   }
 }

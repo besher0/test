@@ -1,7 +1,6 @@
 import {
   Controller,
   Post as HttpPost,
-  Patch,
   Delete,
   Get,
   Body,
@@ -9,6 +8,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  Put,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -26,6 +26,8 @@ import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { ReactToPostDto } from './dto/react-to-post.dto';
+import { BusinessType } from 'src/restaurant/restaurant.entity';
+import { OptionalAuthGuard } from 'src/auth/guards/optional-auth.guard';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -34,7 +36,7 @@ export class PostController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Create a post (only restaurant owners)' })
+  @ApiOperation({ summary: 'Create a post (restaurant/store owners only)' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -62,7 +64,7 @@ export class PostController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Update a post (only restaurant owners)' })
   @ApiParam({ name: 'id', type: String, description: 'Post ID' })
-  @Patch(':id')
+  @Put(':id')
   async updatePost(
     @Param('id') id: string,
     @CurrentUser() user: User,
@@ -82,14 +84,14 @@ export class PostController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get posts from restaurants (all visible)' })
-  @Get()
-  async getPosts(@CurrentUser() user: User) {
-    return this.postService.getPostsForUser(user.id);
+  @ApiOperation({ summary: 'Get posts by business type (restaurant/store)' })
+  @Get('by-type/:type')
+  async getPosts(@Param('type') type: BusinessType, @CurrentUser() user: User) {
+    return this.postService.getPostsForUser(type, user.id);
   }
 
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalAuthGuard)
   @ApiOperation({ summary: 'React to a post' })
   @ApiParam({ name: 'id', type: String, description: 'Post ID' })
   @HttpPost(':id/reactions')

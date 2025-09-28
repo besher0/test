@@ -21,13 +21,49 @@ export class MyLikesResponseDto {
   likes: Array<{ id: string; type: 'meal' | 'restaurant'; name: string }>;
 }
 
+// export class MealLikeDto {
+//   id: number;
+//   name: string;
+// }
+
+// export class RestaurantLikeDto {
+//   id: number;
+//   name: string;
+// }
+
+// export class CountryLikeDto {
+//   @ApiProperty({
+//     description: 'معرّف الدولة',
+//     example: '123e4567-e89b-12d3-a456-426614174000',
+//   })
+//   id: string;
+
+//   @ApiProperty({ description: 'اسم الدولة', example: 'سوريا' })
+//   name: string;
+
+//   @ApiProperty({
+//     description: 'صورة الدولة',
+//     example: 'https://res.cloudinary.com/.../countries/flag.png',
+//   })
+//   imageUrl: string;
+// }
+
 export class MealLikeDto {
-  id: number;
+  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
+  id: string;
+
+  @ApiProperty({ example: 'كبسة سعودية' })
   name: string;
+
+  @ApiProperty({ example: 'https://res.cloudinary.com/.../meals/kabsa.png' })
+  imageUrl?: string;
 }
 
 export class RestaurantLikeDto {
-  id: number;
+  @ApiProperty({ example: 'rest-id-456' })
+  id: string;
+
+  @ApiProperty({ example: 'مطعم البيت الشامي' })
   name: string;
 }
 

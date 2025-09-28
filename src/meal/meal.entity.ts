@@ -13,6 +13,7 @@ import { Category } from 'src/category/category.entity';
 import { Country } from 'src/country/county.entity'; // 👈 أضفنا الاستيراد
 import { ApiProperty } from '@nestjs/swagger';
 import { Like } from 'src/like/like.entity';
+import { OrderItem } from 'src/order/order-item.entity';
 
 @Entity()
 export class Meal {
@@ -39,7 +40,11 @@ export class Meal {
   @Column({ nullable: true })
   preparationTime: string; // ⏱️ وقت التحضير
 
-  @Column({ type: 'enum', enum: ['restaurant', 'store'], nullable: true })
+  @Column({
+    type: 'enum',
+    enum: BusinessType,
+    enumName: 'business_type_enum',
+  })
   type: BusinessType;
 
   @ManyToOne(() => Restaurant, (restaurant) => restaurant.meals, {
@@ -62,6 +67,9 @@ export class Meal {
 
   @OneToMany(() => Like, (like) => like.meal)
   likes: Like[];
+
+  @OneToMany(() => OrderItem, (item) => item.meal)
+  orderItems: OrderItem[];
 
   @CreateDateColumn()
   createdAt: Date;
