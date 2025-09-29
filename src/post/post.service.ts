@@ -11,7 +11,8 @@ import { User } from 'src/user/user.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { ReactToPostDto } from './dto/react-to-post.dto';
-import { BusinessType, Restaurant } from 'src/restaurant/restaurant.entity';
+import { Restaurant } from 'src/restaurant/restaurant.entity';
+import { BusinessType } from 'src/common/business-type.enum';
 
 @Injectable()
 export class PostService {
@@ -28,16 +29,23 @@ export class PostService {
   async createPost(
     user: User,
     dto: CreatePostDto,
+    type: BusinessType,
     fileUrl?: string,
     thumbnailUrl?: string,
   ): Promise<Post> {
-    if (user.userType !== 'restaurant') {
-      throw new ForbiddenException('Only restaurant owners can create posts');
+    // enforce the user is owner of the matching business type
+    // user.userType is a string union including 'restaurant' | 'store'
+    const typeString =
+      type === BusinessType.RESTAURANT ? 'restaurant' : 'store';
+    if (user.userType !== typeString) {
+      throw new ForbiddenException(
+        `Only ${typeString} owners can create posts`,
+      );
     }
 
     // نجيب المطعم تبع المستخدم
     const restaurant = await this.restaurantRepo.findOne({
-      where: { owner: { id: user.id } },
+      where: { owner: { id: user.id }, type },
       relations: ['owner'],
     });
 
@@ -50,6 +58,7 @@ export class PostService {
       text: dto.text,
       mediaUrl: fileUrl,
       thumbnailUrl,
+      businessType: type,
       restaurant: {
         id: restaurant.id, // نخزن المطعم بشكل آمن
       },

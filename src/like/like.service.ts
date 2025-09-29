@@ -5,7 +5,8 @@ import { Like } from './like.entity';
 import { IsNull, Not, Repository } from 'typeorm';
 import { User } from 'src/user/user.entity';
 import { Meal } from 'src/meal/meal.entity';
-import { BusinessType, Restaurant } from 'src/restaurant/restaurant.entity';
+import { Restaurant } from 'src/restaurant/restaurant.entity';
+import { BusinessType } from 'src/common/business-type.enum';
 import { Country } from 'src/country/county.entity';
 
 @Injectable()

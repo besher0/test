@@ -8,7 +8,8 @@ import {
   OneToMany,
   JoinColumn,
 } from 'typeorm';
-import { BusinessType, Restaurant } from 'src/restaurant/restaurant.entity';
+import { Restaurant } from 'src/restaurant/restaurant.entity';
+import { BusinessType } from 'src/common/business-type.enum';
 import { Category } from 'src/category/category.entity';
 import { Country } from 'src/country/county.entity'; // 👈 أضفنا الاستيراد
 import { ApiProperty } from '@nestjs/swagger';

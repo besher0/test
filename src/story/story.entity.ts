@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { Reaction } from './reaction.entity';
+import { BusinessType } from 'src/common/business-type.enum';
 
 @Entity()
 export class Story {
@@ -25,6 +26,13 @@ export class Story {
 
   @Column()
   expiresAt: Date;
+
+  @Column({
+    type: 'enum',
+    enum: BusinessType,
+    default: BusinessType.RESTAURANT,
+  })
+  businessType: BusinessType;
 
   @ManyToOne(() => Restaurant, (restaurant) => restaurant.stories, {
     onDelete: 'CASCADE',

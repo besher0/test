@@ -18,7 +18,7 @@ import {
 } from './like.dto';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
-import { BusinessType } from 'src/follow/follow.entity';
+import { BusinessType } from 'src/common/business-type.enum';
 
 @ApiTags('Likes')
 @ApiBearerAuth()

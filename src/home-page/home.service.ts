@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, MoreThan, Repository } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Meal } from '../meal/meal.entity';
 import { Country } from '../country/county.entity';
 import { Restaurant } from '../restaurant/restaurant.entity';
+import { BusinessType } from '../common/business-type.enum';
 import { Rating } from '../rating/rating.entity';
-import { BusinessType } from '../home-page/home.controller';
+import { Post } from '../post/post.entity';
+import { PostReaction } from '../post/post-reaction.entity';
+import { Story } from '../story/story.entity';
+import { Follow } from '../follow/follow.entity';
 
 @Injectable()
 export class HomeService {
@@ -16,6 +20,11 @@ export class HomeService {
     @InjectRepository(Country) private countryRepo: Repository<Country>,
     @InjectRepository(Restaurant) private restRepo: Repository<Restaurant>,
     @InjectRepository(Rating) private ratingRepo: Repository<Rating>,
+    @InjectRepository(Post) private postRepo: Repository<Post>,
+    @InjectRepository(PostReaction)
+    private postReactionRepo: Repository<PostReaction>,
+    @InjectRepository(Story) private storyRepo: Repository<Story>,
+    @InjectRepository(Follow) private followRepo: Repository<Follow>,
   ) {}
 
   async getHomeSections(businessType: BusinessType, userId?: string) {
@@ -156,6 +165,94 @@ export class HomeService {
         rating: r.averageRating,
         isLiked: userId ? r.likes.some((l) => l.user?.id === userId) : false,
       })),
+    };
+  }
+
+  async getFeed(businessType: BusinessType, userId?: string) {
+    // Posts by business type with reactions summary and user reaction
+    const posts = await this.postRepo.find({
+      where: { businessType },
+      relations: ['restaurant', 'reactions', 'reactions.user'],
+      order: { createdAt: 'DESC' },
+    });
+
+    const postItems = posts.map((post) => {
+      const like = post.reactions?.filter((r) => r.type === 'like').length ?? 0;
+      const love = post.reactions?.filter((r) => r.type === 'love').length ?? 0;
+      const fire = post.reactions?.filter((r) => r.type === 'fire').length ?? 0;
+      const userReaction = userId
+        ? (post.reactions?.find((r) => r.user?.id === userId)?.type ?? null)
+        : null;
+      return {
+        id: post.id,
+        text: post.text,
+        mediaUrl: post.mediaUrl,
+        thumbnailUrl: post.thumbnailUrl,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        restaurant: post.restaurant
+          ? { id: post.restaurant.id, name: post.restaurant.name }
+          : null,
+        reactions: { like, love, fire },
+        hasReacted: userReaction,
+      };
+    });
+
+    // Stories from followed restaurants/stores by business type (not expired)
+    let storyItems: Array<{
+      id: string;
+      text?: string;
+      mediaUrl?: string;
+      thumbnailUrl?: string;
+      createdAt: Date;
+      expiresAt: Date;
+      restaurant: { id: string; name: string } | null;
+      hasReacted: 'like' | 'love' | 'fire' | null;
+    }> = [];
+
+    if (userId) {
+      const follows = await this.followRepo.find({
+        where: { user: { id: userId }, type: businessType },
+        relations: ['restaurant'],
+      });
+      const followedRestaurantIds = follows
+        .map((f) => f.restaurant?.id)
+        .filter((id): id is string => !!id);
+
+      if (followedRestaurantIds.length > 0) {
+        const now = new Date();
+        const stories = await this.storyRepo.find({
+          where: {
+            restaurant: { id: In(followedRestaurantIds) },
+            expiresAt: MoreThan(now),
+            businessType,
+          },
+          relations: ['restaurant', 'reactions', 'reactions.user'],
+          order: { createdAt: 'DESC' },
+        });
+
+        storyItems = stories.map((s) => {
+          const userReaction =
+            s.reactions?.find((r) => r.user?.id === userId)?.type ?? null;
+          return {
+            id: s.id,
+            text: s.text,
+            mediaUrl: s.mediaUrl,
+            thumbnailUrl: s.thumbnailUrl,
+            createdAt: s.createdAt,
+            expiresAt: s.expiresAt,
+            restaurant: s.restaurant
+              ? { id: s.restaurant.id, name: s.restaurant.name }
+              : null,
+            hasReacted: userReaction,
+          };
+        });
+      }
+    }
+
+    return {
+      posts: postItems,
+      stories: storyItems,
     };
   }
 }

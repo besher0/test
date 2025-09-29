@@ -7,7 +7,7 @@ import {
   IsNumber,
   IsEnum,
 } from 'class-validator';
-import { BusinessType } from 'src/restaurant/restaurant.entity';
+import { BusinessType } from 'src/common/business-type.enum';
 
 export class CreateMealDto {
   @ApiProperty({ example: 'كبسة لحم' })

@@ -8,11 +8,9 @@ import {
 } from 'typeorm';
 import { User } from 'src/user/user.entity';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
+import { BusinessType } from 'src/common/business-type.enum';
 
-export enum BusinessType {
-  RESTAURANT = 'restaurant',
-  STORE = 'store',
-}
+// BusinessType moved to src/common/business-type.enum
 
 @Entity()
 @Unique(['user', 'restaurant'])

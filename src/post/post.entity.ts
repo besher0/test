@@ -9,10 +9,7 @@ import {
 } from 'typeorm';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { PostReaction } from './post-reaction.entity';
-export enum BusinessType {
-  RESTAURANT = 'restaurant',
-  STORE = 'store',
-}
+import { BusinessType } from 'src/common/business-type.enum';
 
 @Entity('posts')
 export class Post {
@@ -53,3 +50,4 @@ export class Post {
   @UpdateDateColumn()
   updatedAt: Date;
 }
+export { BusinessType };

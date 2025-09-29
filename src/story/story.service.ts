@@ -13,6 +13,7 @@ import { CreateStoryDto } from './dto/create-story.dto';
 import { UpdateStoryDto } from './dto/update-story.dto';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
+import { BusinessType } from 'src/common/business-type.enum';
 
 @Injectable()
 export class StoryService {
@@ -28,10 +29,15 @@ export class StoryService {
   async createStory(
     user: User,
     dto: CreateStoryDto,
-    file?: Express.Multer.File,
+    file: Express.Multer.File | undefined,
+    type: BusinessType = BusinessType.RESTAURANT,
   ) {
-    if (user.userType !== 'restaurant') {
-      throw new ForbiddenException('Only restaurant owners can create stories');
+    const typeString =
+      type === BusinessType.RESTAURANT ? 'restaurant' : 'store';
+    if (user.userType !== typeString) {
+      throw new ForbiddenException(
+        `Only ${typeString} owners can create stories`,
+      );
     }
 
     // ======= safer lookup using QueryBuilder (avoids findOne typings mismatch) =======
@@ -83,6 +89,7 @@ export class StoryService {
       mediaUrl,
       thumbnailUrl,
       restaurant: { id: restaurant.id }, // <-- important: partial object with id only
+      businessType: type,
       expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
     });
 
@@ -157,7 +164,7 @@ export class StoryService {
     return this.reactionRepo.save(reaction);
   }
 
-  async getStoriesForUser(userId: string) {
+  async getStoriesForUser(userId: string, type?: BusinessType) {
     const now = new Date();
 
     const stories = await this.storyRepo.find({
@@ -171,7 +178,11 @@ export class StoryService {
       order: { createdAt: 'DESC' },
     });
 
-    return stories.map((story) => {
+    const filtered = type
+      ? stories.filter((s) => s.businessType === type)
+      : stories;
+
+    return filtered.map((story) => {
       const reactionsCount = {
         like: story.reactions.filter((r) => r.type === 'like').length,
         love: story.reactions.filter((r) => r.type === 'love').length,

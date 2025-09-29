@@ -9,6 +9,7 @@ import {
   UseGuards,
   UseInterceptors,
   Put,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -16,6 +17,7 @@ import {
   ApiConsumes,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -26,6 +28,7 @@ import { StoryService } from './story.service';
 import { CreateStoryDto } from './dto/create-story.dto';
 import { UpdateStoryDto } from './dto/update-story.dto';
 import { ReactToStoryDto } from './dto/react-to-story.dto';
+import { BusinessType } from 'src/common/business-type.enum';
 
 @ApiTags('Stories')
 @Controller('stories')
@@ -48,12 +51,14 @@ export class StoryController {
   })
   @Post()
   @UseInterceptors(FileInterceptor('file'))
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
   async createStory(
     @CurrentUser() user: User,
     @Body() dto: CreateStoryDto,
     @UploadedFile() file: Express.Multer.File,
+    @Query('type') type: BusinessType,
   ) {
-    return this.storyService.createStory(user, dto, file);
+    return this.storyService.createStory(user, dto, file, type);
   }
 
   @ApiBearerAuth()
@@ -99,8 +104,12 @@ export class StoryController {
     summary: 'Get stories from followed restaurants (48h expiry)',
   })
   @Get()
-  async getStories(@CurrentUser() user: User) {
-    return this.storyService.getStoriesForUser(user.id);
+  @ApiQuery({ name: 'type', enum: BusinessType, required: false })
+  async getStories(
+    @CurrentUser() user: User,
+    @Query('type') type?: BusinessType,
+  ) {
+    return this.storyService.getStoriesForUser(user.id, type);
   }
 
   @ApiBearerAuth()

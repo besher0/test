@@ -9,6 +9,7 @@ import {
   UseGuards,
   UseInterceptors,
   Put,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -16,6 +17,7 @@ import {
   ApiConsumes,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -26,7 +28,7 @@ import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { ReactToPostDto } from './dto/react-to-post.dto';
-import { BusinessType } from 'src/restaurant/restaurant.entity';
+import { BusinessType } from 'src/common/business-type.enum';
 import { OptionalAuthGuard } from 'src/auth/guards/optional-auth.guard';
 
 @ApiTags('Posts')
@@ -49,15 +51,17 @@ export class PostController {
   })
   @HttpPost()
   @UseInterceptors(FileInterceptor('file'))
+  @ApiQuery({ name: 'type', enum: BusinessType, required: true })
   async createPost(
     @CurrentUser() user: User,
     @Body() dto: CreatePostDto,
+    @Query('type') type: BusinessType,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     const fileUrl = file?.path;
     const thumbnailUrl = file ? `thumbnail-of-${file.filename}` : undefined;
 
-    return this.postService.createPost(user, dto, fileUrl, thumbnailUrl);
+    return this.postService.createPost(user, dto, type, fileUrl, thumbnailUrl);
   }
 
   @ApiBearerAuth()

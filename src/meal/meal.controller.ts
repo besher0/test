@@ -29,7 +29,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
 import { OptionalAuthGuard } from 'src/auth/guards/optional-auth.guard';
-import { BusinessType } from 'src/restaurant/restaurant.entity';
+import { BusinessType } from 'src/common/business-type.enum';
 
 @Controller('meals')
 export class MealController {
