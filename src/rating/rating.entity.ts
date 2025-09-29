@@ -38,7 +38,7 @@ export class Rating {
   })
   type: BusinessType;
 
-  @Column({ type: 'int', width: 1 })
+  @Column({ type: 'float' })
   score: number; // 1-5
 
   @Column({ type: 'text', nullable: true })

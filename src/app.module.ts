@@ -21,6 +21,7 @@ import { HomeModule } from './home-page/home.module';
 import { FollowModule } from './follow/follow.module';
 import { LikeModule } from './like/like.module';
 import { ReelModule } from './story/reel.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -42,6 +43,7 @@ import { ReelModule } from './story/reel.module';
     FollowModule,
     LikeModule,
     ReelModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
