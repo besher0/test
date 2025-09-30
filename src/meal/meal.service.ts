@@ -109,28 +109,68 @@ export class MealService {
     return this.mealRepo.save(meal);
   }
 
-  async findAll(user: User, type: BusinessType): Promise<any[]> {
+  async findAll(user: User, type: BusinessType): Promise<{ meals: any[] }> {
     const meals = await this.mealRepo.find({
       where: { type },
-      relations: ['restaurant', 'category', 'likes'],
+      relations: [
+        'restaurant',
+        'restaurant.owner',
+        'restaurant.country',
+        'category',
+        'likes',
+      ],
     });
 
-    return meals.map((meal) => ({
-      id: meal.id,
-      name: meal.name,
-      imageUrl: meal.image_url,
-      restaurant: {
-        id: meal.restaurant?.id,
-        name: meal.restaurant?.name,
-      },
-      category: {
-        id: meal.category?.id,
-        name: meal.category?.name,
-      },
-      isLiked: user
-        ? meal.likes.some((like) => like.user.id === user.id)
-        : false,
-    }));
+    const mapped = meals.map((meal) => {
+      const rest = meal.restaurant;
+      const restaurantFull = rest
+        ? {
+            id: rest.id,
+            name: rest.name,
+            location: rest.location,
+            latitude: rest.latitude,
+            longitude: rest.longitude,
+            Identity: rest.Identity,
+            logo_url: rest.logo_url,
+            mainImage: rest.mainImage,
+            description: rest.description,
+            workingHours: rest.workingHours,
+            type: rest.type,
+            averageRating: rest.averageRating,
+            createdAt: rest.createdAt,
+            updatedAt: rest.updatedAt,
+            owner: rest.owner
+              ? {
+                  id: rest.owner.id,
+                  firstName: rest.owner.firstName,
+                  lastName: rest.owner.lastName,
+                }
+              : null,
+            country: rest.country
+              ? { id: rest.country.id, name: rest.country.name }
+              : null,
+            category: rest.category
+              ? { id: rest.category.id, name: rest.category.name }
+              : null,
+          }
+        : null;
+
+      return {
+        id: meal.id,
+        name: meal.name,
+        imageUrl: meal.image_url,
+        restaurant: restaurantFull,
+        category: {
+          id: meal.category?.id,
+          name: meal.category?.name,
+        },
+        isLiked: user
+          ? meal.likes.some((like) => like.user.id === user.id)
+          : false,
+      };
+    });
+
+    return { meals: mapped };
   }
 
   async findOne(id: string, user: User, type: BusinessType): Promise<any> {

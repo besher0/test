@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,6 +13,26 @@ export class FilterService {
     @InjectRepository(Restaurant)
     private restaurantRepo: Repository<Restaurant>,
   ) {}
+
+  // helper to safely parse isLiked from raw result row
+  private parseIsLiked(rawRow: any): boolean {
+    try {
+      const row = rawRow as Record<string, unknown> | undefined;
+      const v = row ? row['isLiked'] : undefined;
+      if (v === undefined || v === null) return false;
+      // handle based on actual type to avoid '[object Object]' stringification
+      if (typeof v === 'number') return v > 0;
+      if (typeof v === 'boolean') return v;
+      if (typeof v === 'string') {
+        const n = parseInt(v, 10);
+        return !Number.isNaN(n) && n > 0;
+      }
+      return false;
+    } catch (e) {
+      console.warn('parseIsLiked error', e);
+      return false;
+    }
+  }
 
   async getCountries(
     type: 'restaurant' | 'store',
@@ -56,16 +75,15 @@ export class FilterService {
       .where('restaurant.type = :type', { type });
 
     if (category) {
-      query.andWhere('category.name ILIKE :category', {
-        category: `%${category}%`,
-      });
+      // strict filter by category id
+      query.andWhere('category.id = :categoryId', { categoryId: category });
     }
 
     if (search) {
       query.andWhere('meal.name ILIKE :search', { search: `%${search}%` });
     }
 
-    // إذا في مستخدم
+    // if user provided -> add subquery to mark isLiked
     if (userId) {
       query.addSelect((subQuery) => {
         return subQuery
@@ -78,10 +96,9 @@ export class FilterService {
 
     const meals = await query.getRawAndEntities();
 
-    // تجهيز النتيجة
     return meals.entities.map((meal, idx) => ({
       ...meal,
-      isLiked: userId ? Boolean(parseInt(meals.raw[idx].isLiked, 10)) : false,
+      isLiked: userId ? this.parseIsLiked(meals.raw[idx]) : false,
     }));
   }
 
@@ -108,12 +125,12 @@ export class FilterService {
       });
     }
 
-    // إذا في مستخدم → subquery لتحديد إذا عامل لايك
+    // if user -> add subquery to mark isLiked
     if (userId) {
       query.addSelect((subQuery) => {
         return subQuery
           .select('COUNT(1)')
-          .from('like', 'rl') // 👈 اسم جدول اللايكات تبع المطاعم
+          .from('like', 'rl')
           .where('rl.restaurantId = restaurant.id')
           .andWhere('rl.userId = :userId', { userId });
       }, 'isLiked');
@@ -123,9 +140,7 @@ export class FilterService {
 
     return restaurants.entities.map((restaurant, idx) => ({
       ...restaurant,
-      isLiked: userId
-        ? Boolean(parseInt(restaurants.raw[idx].isLiked, 10))
-        : false,
+      isLiked: userId ? this.parseIsLiked(restaurants.raw[idx]) : false,
     }));
   }
 }
