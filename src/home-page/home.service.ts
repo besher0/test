@@ -146,7 +146,6 @@ export class HomeService {
         restaurant: meal.restaurant
           ? { id: meal.restaurant.id, name: meal.restaurant.name }
           : null,
-        likes: meal.likes,
         isLiked: userId ? meal.likes.some((l) => l.user.id === userId) : false,
       })),
       arabicKitchens: arabicKitchens.map((country) => ({
