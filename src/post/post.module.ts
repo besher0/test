@@ -6,10 +6,11 @@ import { PostController } from './post.controller';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 import { PostReaction } from './post-reaction.entity';
+import { Story } from 'src/story/story.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Post, Restaurant, PostReaction]),
+    TypeOrmModule.forFeature([Post, Restaurant, PostReaction, Story]),
     CloudinaryModule,
   ],
   providers: [PostService],

@@ -22,6 +22,7 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
 import { PostService } from './post.service';
@@ -50,7 +51,7 @@ export class PostController {
     },
   })
   @HttpPost()
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
   @ApiQuery({ name: 'type', enum: BusinessType, required: true })
   async createPost(
     @CurrentUser() user: User,
@@ -58,10 +59,8 @@ export class PostController {
     @Query('type') type: BusinessType,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    const fileUrl = file?.path;
-    const thumbnailUrl = file ? `thumbnail-of-${file.filename}` : undefined;
-
-    return this.postService.createPost(user, dto, type, fileUrl, thumbnailUrl);
+    // pass the Multer file directly to the service; service will upload to Cloudinary
+    return this.postService.createPost(user, dto, type, file);
   }
 
   @ApiBearerAuth()

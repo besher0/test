@@ -7,12 +7,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Post } from './post.entity';
 import { PostReaction } from './post-reaction.entity';
+import { Story } from 'src/story/story.entity';
 import { User } from 'src/user/user.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { ReactToPostDto } from './dto/react-to-post.dto';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { BusinessType } from 'src/common/business-type.enum';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class PostService {
@@ -23,27 +25,27 @@ export class PostService {
     private readonly reactionRepo: Repository<PostReaction>,
     @InjectRepository(Restaurant)
     private readonly restaurantRepo: Repository<Restaurant>,
+    @InjectRepository(Story)
+    private readonly storyRepo: Repository<Story>,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
-  // Create a post — only restaurant owners (owner must be linked in Restaurant.owner)
+  // Create a post — only restaurant/store owners (owner must be linked in Restaurant.owner)
   async createPost(
     user: User,
     dto: CreatePostDto,
     type: BusinessType,
-    fileUrl?: string,
-    thumbnailUrl?: string,
+    file?: Express.Multer.File,
   ): Promise<Post> {
-    // enforce the user is owner of the matching business type
-    // user.userType is a string union including 'restaurant' | 'store'
     const typeString =
       type === BusinessType.RESTAURANT ? 'restaurant' : 'store';
+
     if (user.userType !== typeString) {
       throw new ForbiddenException(
         `Only ${typeString} owners can create posts`,
       );
     }
 
-    // نجيب المطعم تبع المستخدم
     const restaurant = await this.restaurantRepo.findOne({
       where: { owner: { id: user.id }, type },
       relations: ['owner'],
@@ -53,15 +55,34 @@ export class PostService {
       throw new NotFoundException('No restaurant found for this user');
     }
 
-    // ننشئ البوست الجديد
+    let mediaUrl: string | undefined;
+    let thumbnailUrl: string | undefined;
+
+    if (file) {
+      if (file.mimetype.startsWith('video/')) {
+        const uploadResult = await this.cloudinaryService.uploadVideo(
+          file,
+          'restaurants/posts',
+        );
+        mediaUrl = uploadResult.secure_url;
+        thumbnailUrl = this.cloudinaryService.generateThumbnail(
+          uploadResult.public_id,
+        );
+      } else if (file.mimetype.startsWith('image/')) {
+        const uploadResult = await this.cloudinaryService.uploadImage(
+          file,
+          'restaurants/posts',
+        );
+        mediaUrl = uploadResult.secure_url;
+      }
+    }
+
     const post = this.postRepo.create({
       text: dto.text,
-      mediaUrl: fileUrl,
+      mediaUrl,
       thumbnailUrl,
       businessType: type,
-      restaurant: {
-        id: restaurant.id, // نخزن المطعم بشكل آمن
-      },
+      restaurant: { id: restaurant.id },
     });
 
     return this.postRepo.save(post);
@@ -124,17 +145,13 @@ export class PostService {
     if (reaction) {
       reaction.type = type;
     } else {
-      reaction = this.reactionRepo.create({
-        post,
-        user,
-        type,
-      });
+      reaction = this.reactionRepo.create({ post, user, type });
     }
 
     return this.reactionRepo.save(reaction);
   }
 
-  // Get posts visible to user (here: all posts; you can filter by follows if needed)
+  // Get posts visible to user (here: all posts of a business type)
   async getPostsForUser(type: BusinessType, userId: string) {
     const posts = await this.postRepo.find({
       relations: [
@@ -144,9 +161,38 @@ export class PostService {
         'reactions.user',
       ],
       where: { businessType: type },
-
       order: { createdAt: 'DESC' },
     });
+
+    // build story lookup for posts with mediaUrl
+    const storyLookup: Record<string, Story> = {};
+    try {
+      const mediaUrls = posts
+        .map((p) => p.mediaUrl)
+        .filter((u): u is string => !!u);
+
+      const restaurantIds = posts
+        .map((p) => p.restaurant?.id)
+        .filter((id): id is string => !!id);
+
+      if (this.storyRepo && mediaUrls.length > 0 && restaurantIds.length > 0) {
+        const foundStories = await this.storyRepo
+          .createQueryBuilder('s')
+          .leftJoinAndSelect('s.restaurant', 'r')
+          .where('s.mediaUrl IN (:...urls)', { urls: mediaUrls })
+          .andWhere('r.id IN (:...rids)', { rids: restaurantIds })
+          .getMany();
+
+        for (const s of foundStories) {
+          if (s.mediaUrl && s.restaurant?.id) {
+            storyLookup[`${s.mediaUrl}|${s.restaurant.id}`] = s;
+          }
+        }
+      }
+    } catch (e) {
+      // keep a small log so the linter doesn't complain about unused vars
+      console.warn('story lookup failed in getPostsForUser:', e);
+    }
 
     return posts.map((post) => {
       const reactionsCount = {
@@ -157,6 +203,43 @@ export class PostService {
 
       const userReaction = post.reactions?.find((r) => r.user.id === userId);
 
+      let matchingKey: string | null = null;
+      if (post.mediaUrl && post.restaurant?.id) {
+        matchingKey = `${post.mediaUrl}|${post.restaurant.id}`;
+      }
+
+      let matchingStoryId: string | null = null;
+      if (matchingKey && storyLookup[matchingKey]) {
+        matchingStoryId = storyLookup[matchingKey].id;
+      }
+
+      const rest = post.restaurant;
+      const restaurantFull = rest
+        ? {
+            id: rest.id,
+            name: rest.name,
+            location: rest.location,
+            latitude: rest.latitude,
+            longitude: rest.longitude,
+            Identity: rest.Identity,
+            logo_url: rest.logo_url,
+            mainImage: rest.mainImage,
+            description: rest.description,
+            workingHours: rest.workingHours,
+            type: rest.type,
+            averageRating: rest.averageRating,
+            createdAt: rest.createdAt,
+            updatedAt: rest.updatedAt,
+            owner: rest.owner
+              ? {
+                  id: rest.owner.id,
+                  firstName: rest.owner.firstName,
+                  lastName: rest.owner.lastName,
+                }
+              : null,
+          }
+        : null;
+
       return {
         id: post.id,
         text: post.text,
@@ -164,10 +247,8 @@ export class PostService {
         thumbnailUrl: post.thumbnailUrl,
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
-        restaurant: {
-          id: post.restaurant.id,
-          name: post.restaurant.name,
-        },
+        restaurant: restaurantFull,
+        matchingStoryId,
         reactions: reactionsCount,
         hasReacted: userReaction ? userReaction.type : null,
       };

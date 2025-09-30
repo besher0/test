@@ -198,10 +198,16 @@ export class StoryService {
         text: story.text,
         createdAt: story.createdAt,
         expiresAt: story.expiresAt,
-        restaurant: {
-          id: story.restaurant.id,
-          name: story.restaurant.name,
-        },
+        restaurant: story.restaurant
+          ? {
+              id: story.restaurant.id,
+              name: story.restaurant.name,
+              location: story.restaurant.location,
+              logo_url: story.restaurant.logo_url,
+              mainImage: story.restaurant.mainImage,
+              averageRating: story.restaurant.averageRating,
+            }
+          : null,
         reactions: reactionsCount,
         hasReacted: userReaction ? userReaction.type : null,
       };
