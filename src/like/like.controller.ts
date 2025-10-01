@@ -12,9 +12,9 @@ import {
 } from '@nestjs/swagger';
 import {
   ToggleLikeResponseDto,
-  MealLikeDto,
-  RestaurantLikeDto,
-  CountryLikeDto,
+  MealLikesResponseDto,
+  RestaurantLikesResponseDto,
+  CountryLikesResponseDto,
 } from './like.dto';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
@@ -62,7 +62,7 @@ export class LikeController {
     required: true,
     description: 'حدد نوع (restaurant | store) للوجبات/المنتجات',
   })
-  @ApiOkResponse({ type: [MealLikeDto] })
+  @ApiOkResponse({ type: MealLikesResponseDto })
   async getMyLikes(
     @CurrentUser() user: User,
     @Query('type') type: BusinessType,
@@ -81,7 +81,7 @@ export class LikeController {
     required: true,
     description: 'حدد نوع (restaurant | store) للمطاعم/المخازن',
   })
-  @ApiOkResponse({ type: [RestaurantLikeDto] })
+  @ApiOkResponse({ type: RestaurantLikesResponseDto })
   async getRestaurantLikes(
     @CurrentUser() user: User,
     @Query('type') type: BusinessType,
@@ -92,7 +92,7 @@ export class LikeController {
   @UseGuards(JwtAuthGuard)
   @Get('my-likes/countries')
   @ApiOperation({ summary: 'إرجاع قائمة إعجابات الدول الخاصة بالمستخدم' })
-  @ApiOkResponse({ type: [CountryLikeDto] })
+  @ApiOkResponse({ type: CountryLikesResponseDto })
   async getCountryLikes(@CurrentUser() user: User) {
     return this.likeService.getCountryLikes(user);
   }

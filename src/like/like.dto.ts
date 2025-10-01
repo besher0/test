@@ -57,6 +57,12 @@ export class MealLikeDto {
 
   @ApiProperty({ example: 'https://res.cloudinary.com/.../meals/kabsa.png' })
   imageUrl?: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'هل المستخدم عامل إعجاب بهذا العنصر',
+  })
+  isLiked: boolean;
 }
 
 export class RestaurantLikeDto {
@@ -65,6 +71,12 @@ export class RestaurantLikeDto {
 
   @ApiProperty({ example: 'مطعم البيت الشامي' })
   name: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'هل المستخدم عامل إعجاب بهذا العنصر',
+  })
+  isLiked: boolean;
 }
 
 export class CountryLikeDto {
@@ -82,4 +94,25 @@ export class CountryLikeDto {
     example: 'https://res.cloudinary.com/.../countries/flag.png',
   })
   imageUrl: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'هل المستخدم عامل إعجاب بهذا العنصر',
+  })
+  isLiked: boolean;
+}
+
+export class MealLikesResponseDto {
+  @ApiProperty({ type: [MealLikeDto] })
+  meals: MealLikeDto[];
+}
+
+export class RestaurantLikesResponseDto {
+  @ApiProperty({ type: [RestaurantLikeDto] })
+  restaurants: RestaurantLikeDto[];
+}
+
+export class CountryLikesResponseDto {
+  @ApiProperty({ type: [CountryLikeDto] })
+  countries: CountryLikeDto[];
 }

@@ -80,6 +80,7 @@ return {
       id: like.meal.id,
       name: like.meal.name,
       imageUrl: like.meal.image_url || undefined,
+      isLiked: true,
     })),
 };
 
@@ -96,7 +97,11 @@ async getRestaurantLikes(user: User, type: BusinessType) {
     });
 
   return {
-    restaurants: likes.map((like) => (like.restaurant )),
+    restaurants: likes.map((like) => ({
+      // نحتفظ بكيان المطعم كما هو، ونضيف حقل isLiked
+      ...like.restaurant,
+      isLiked: true,
+    })),
   };
 }
 
@@ -114,6 +119,7 @@ async getCountryLikes(user: User) {
       id: like.country.id,
       name: like.country.name,
       imageUrl: like.country.imageUrl || undefined,
+      isLiked: true,
     })),
   };
 }
