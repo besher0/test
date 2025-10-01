@@ -16,4 +16,19 @@ export class LoginDto {
   @IsString()
   @MinLength(6, { message: 'Password must be at least 6 characters long' })
   password: string;
+
+  @ApiProperty({
+    description: 'Optional FCM token for push notifications',
+    required: false,
+  })
+  @IsString()
+  // token is optional when provided by the client
+  fcmToken?: string;
+
+  @ApiProperty({
+    description: 'Optional device type (android|ios|web)',
+    required: false,
+  })
+  @IsString()
+  deviceType?: string;
 }

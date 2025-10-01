@@ -81,7 +81,12 @@ export class UserController {
     },
   })
   create(@Body() createUserDto: CreateUserDto) {
-    return this.authService.register(createUserDto);
+    // forward optional fcm token/deviceType to auth service so we can persist immediately after signup
+    return this.authService.register(
+      createUserDto,
+      createUserDto.fcmToken,
+      createUserDto.deviceType,
+    );
   }
 
   @Post('login')
@@ -122,8 +127,22 @@ export class UserController {
       },
     },
   })
-  login(@Body() loginDto: { email: string; password: string }) {
-    return this.authService.login(loginDto.email, loginDto.password);
+  login(
+    @Body()
+    loginDto: {
+      email: string;
+      password: string;
+      fcmToken?: string;
+      deviceType?: string;
+    },
+  ) {
+    return this.authService.login(
+      loginDto.email,
+      loginDto.password,
+      // pass optional tokens through
+      loginDto.fcmToken,
+      loginDto.deviceType,
+    );
   }
 
   @Get()

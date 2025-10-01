@@ -21,12 +21,6 @@ import { AddToCartDto } from './dto/dto.createCart';
 import { User } from 'src/user/user.entity';
 import { AddMultipleToCartDto } from './dto/add-multiple-to-cart.dto';
 
-type UserJwt = {
-  sub: string;
-  email?: string;
-  role?: string;
-};
-
 @ApiTags('Cart')
 @ApiBearerAuth()
 @Controller('cart')

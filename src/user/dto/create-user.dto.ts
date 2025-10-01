@@ -103,6 +103,22 @@ export class CreateUserDto {
   @IsUrl({}, { message: 'Profile picture must be a valid URL' })
   profile_picture?: string;
 
+  @ApiProperty({
+    description: 'Optional FCM token for push notifications',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  fcmToken?: string;
+
+  @ApiProperty({
+    description: 'Optional device type (android|ios|web)',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  deviceType?: string;
+
   // @ApiProperty({
   //   description: 'Bio',
   //   required: false,
