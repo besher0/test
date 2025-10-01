@@ -1,48 +1,57 @@
 // src/notification/notification.controller.ts
 import { Controller, Post, Body } from '@nestjs/common';
 import { NotificationService } from './notification.service';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { RegisterTokenDto } from './dto/register-token.dto';
+import { SendToUserDto } from './dto/send-to-user.dto';
+import { SendToManyDto } from './dto/send-to-many.dto';
+import { SendToTopicDto } from './dto/send-to-topic.dto';
 
+@ApiTags('notifications')
 @Controller('notifications')
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
   // المستخدم يرسل التوكن للسيرفر
   @Post('register-token')
-  async registerToken(
-    @Body('userId') userId: number,
-    @Body('token') token: string,
-    @Body('deviceType') deviceType: string,
-  ) {
-    return this.notificationService.saveToken(userId, token, deviceType);
+  @ApiOperation({ summary: 'Register or update an FCM token for a user' })
+  @ApiBody({ type: RegisterTokenDto })
+  @ApiResponse({ status: 201, description: 'Token saved/updated' })
+  async registerToken(@Body() dto: RegisterTokenDto) {
+    return this.notificationService.saveToken(
+      dto.userId,
+      dto.token,
+      dto.deviceType || 'unknown',
+    );
   }
 
   // إرسال إشعار لمستخدم واحد
   @Post('send-to-user')
-  async sendToUser(
-    @Body('userId') userId: number,
-    @Body('title') title: string,
-    @Body('body') body: string,
-  ) {
-    return this.notificationService.sendToUser(userId, title, body);
+  @ApiOperation({
+    summary: 'Send a notification to a single user (all devices)',
+  })
+  @ApiBody({ type: SendToUserDto })
+  async sendToUser(@Body() dto: SendToUserDto) {
+    return this.notificationService.sendToUser(dto.userId, dto.title, dto.body);
   }
 
   // إرسال إشعار لمجموعة مستخدمين
   @Post('send-to-many')
-  async sendToMany(
-    @Body('userIds') userIds: number[],
-    @Body('title') title: string,
-    @Body('body') body: string,
-  ) {
-    return this.notificationService.sendToManyUsers(userIds, title, body);
+  @ApiOperation({ summary: 'Send a notification to many users' })
+  @ApiBody({ type: SendToManyDto })
+  async sendToMany(@Body() dto: SendToManyDto) {
+    return this.notificationService.sendToManyUsers(
+      dto.userIds,
+      dto.title,
+      dto.body,
+    );
   }
 
   // إرسال إشعار لـ Topic
   @Post('send-to-topic')
-  async sendToTopic(
-    @Body('topic') topic: string,
-    @Body('title') title: string,
-    @Body('body') body: string,
-  ) {
-    return this.notificationService.sendToTopic(topic, title, body);
+  @ApiOperation({ summary: 'Send a notification to a topic' })
+  @ApiBody({ type: SendToTopicDto })
+  async sendToTopic(@Body() dto: SendToTopicDto) {
+    return this.notificationService.sendToTopic(dto.topic, dto.title, dto.body);
   }
 }
