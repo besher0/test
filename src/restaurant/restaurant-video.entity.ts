@@ -1,4 +1,10 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Restaurant } from './restaurant.entity';
 
 @Entity('restaurant_videos')
@@ -16,4 +22,7 @@ export class RestaurantVideo {
     onDelete: 'CASCADE',
   })
   restaurant: Restaurant;
+
+  @CreateDateColumn()
+  createdAt: Date;
 }

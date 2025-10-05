@@ -9,6 +9,8 @@ import { Category } from '../category/category.entity';
 import { Country } from '../country/county.entity';
 import { Post } from '../post/post.entity';
 import { RestaurantModule } from '../restaurant/restaurant.module';
+import { Story } from '../story/story.entity';
+import { RestaurantVideo } from '../restaurant/restaurant-video.entity';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { RestaurantModule } from '../restaurant/restaurant.module';
       Category,
       Country,
       Post,
+      Story,
+      RestaurantVideo,
     ]),
     RestaurantModule,
   ],

@@ -16,6 +16,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorator/roles.decorator';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
+// no-op
 
 @ApiTags('dashboard')
 @Controller('dashboard')
@@ -25,7 +26,67 @@ export class DashboardController {
     private readonly restaurantService: RestaurantService,
   ) {}
 
+  // Admin landing widget API
+  @Get('adminHomePage')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  adminHomePage() {
+    return this.dashboardService.getAdminHomePage();
+  }
+
+  // Accounts management list with filtering by userType
+  @Get('accountManagement')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiQuery({
+    name: 'userType',
+    enum: ['normalUser', 'restaurant', 'store'],
+    required: true,
+  })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  accountManagement(
+    @Query('userType') userType: 'normalUser' | 'restaurant' | 'store',
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ) {
+    return this.dashboardService.getAccountManagement({
+      userType,
+      page: Math.max(1, Number(page) || 1),
+      limit: Math.min(100, Math.max(1, Number(limit) || 10)),
+    });
+  }
+
+  // Content moderation feed
+  @Get('getContent')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiQuery({
+    name: 'type',
+    enum: ['posts', 'reels', 'stories'],
+    required: true,
+  })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  getContent(
+    @Query('type') type: 'posts' | 'reels' | 'stories',
+    @Query('page') page = '1',
+    @Query('limit') limit = '24',
+  ) {
+    return this.dashboardService.getContent({
+      type,
+      page: Math.max(1, Number(page) || 1),
+      limit: Math.min(100, Math.max(1, Number(limit) || 24)),
+    });
+  }
+
   @Get('overview')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
   @ApiQuery({
     name: 'businessType',
     enum: ['restaurant', 'store'],
@@ -51,6 +112,9 @@ export class DashboardController {
   }
 
   @Get('top-restaurants')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
   @ApiQuery({
     name: 'businessType',
     enum: ['restaurant', 'store'],
@@ -77,6 +141,9 @@ export class DashboardController {
   }
 
   @Get('top-categories')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
   @ApiQuery({
     name: 'businessType',
     enum: ['restaurant', 'store'],
@@ -94,6 +161,9 @@ export class DashboardController {
   }
 
   @Get('top-countries')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
   @ApiQuery({
     name: 'businessType',
     enum: ['restaurant', 'store'],

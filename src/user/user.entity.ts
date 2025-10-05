@@ -6,6 +6,8 @@ import {
   OneToOne,
   JoinColumn,
   ManyToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Category } from '../category/category.entity';
 import { ApiProperty } from '@nestjs/swagger';
@@ -114,4 +116,14 @@ export class User {
 
   @OneToMany(() => Like, (like) => like.user)
   likes: Like[];
+
+  // Optional city for admin views/filters
+  @Column({ type: 'varchar', nullable: true })
+  city?: string | null;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
