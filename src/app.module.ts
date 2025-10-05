@@ -22,6 +22,7 @@ import { FollowModule } from './follow/follow.module';
 import { LikeModule } from './like/like.module';
 import { ReelModule } from './story/reel.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { PayPalModule } from './paypal/paypal.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -44,6 +45,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     LikeModule,
     ReelModule,
     DashboardModule,
+    PayPalModule,
   ],
   controllers: [AppController],
   providers: [AppService],

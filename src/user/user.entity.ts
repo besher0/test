@@ -96,6 +96,13 @@ export class User {
   // @ApiProperty()
   //  @OneToMany(() => Post, (post) => post.owner)
   // posts: Post[];
+  @ApiProperty({ example: 33.513805, required: false })
+  @Column('decimal', { precision: 10, scale: 6, nullable: true })
+  latitude?: number;
+
+  @ApiProperty({ example: 36.292934, required: false })
+  @Column('decimal', { precision: 10, scale: 6, nullable: true })
+  longitude?: number;
 
   // علاقة مع التفاعلات (المستخدم يتفاعل مع بوستات)
   @ApiProperty()

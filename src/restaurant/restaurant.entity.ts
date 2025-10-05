@@ -188,4 +188,28 @@ export class Restaurant {
   })
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @ApiProperty({
+    example: false,
+    description: 'Whether this restaurant is active/visible to public',
+  })
+  @Column({ default: false })
+  isActive: boolean;
+
+  @ApiProperty({
+    example: null,
+    required: false,
+    description: 'When the restaurant was approved by an admin',
+  })
+  @Column({ type: 'timestamptz', nullable: true })
+  approvedAt?: Date | null;
+
+  @ApiProperty({
+    description: 'Admin user who approved the restaurant',
+    required: false,
+    type: () => User,
+  })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'approvedById' })
+  approvedBy?: User | null;
 }

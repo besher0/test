@@ -8,11 +8,13 @@ import { User } from 'src/user/user.entity';
 import { CartModule } from 'src/cart/cart.module';
 import { Meal } from 'src/meal/meal.entity';
 import { DeliveryLocation } from 'src/restaurant/delivery-location.entity';
+import { PayPalModule } from 'src/paypal/paypal.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Order, OrderItem, User, Meal, DeliveryLocation]),
     CartModule,
+    PayPalModule,
   ],
   providers: [OrderService],
   controllers: [OrderController],

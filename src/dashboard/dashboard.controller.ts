@@ -1,12 +1,29 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Query,
+  Post,
+  Param,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiQuery, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { BusinessType } from '../common/business-type.enum';
+import { RestaurantService } from '../restaurant/restaurant.service';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/auth/decorator/roles.decorator';
+import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
+import { User } from 'src/user/user.entity';
 
 @ApiTags('dashboard')
 @Controller('dashboard')
 export class DashboardController {
-  constructor(private readonly dashboardService: DashboardService) {}
+  constructor(
+    private readonly dashboardService: DashboardService,
+    private readonly restaurantService: RestaurantService,
+  ) {}
 
   @Get('overview')
   @ApiQuery({
@@ -105,5 +122,25 @@ export class DashboardController {
       if (!isNaN(d.getTime())) toDate = d;
     }
     return { from: fromDate, to: toDate };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @Post('restaurants/:id/approve')
+  @ApiBearerAuth()
+  approveRestaurant(@Param('id') id: string, @CurrentUser() admin: User) {
+    return this.restaurantService.approveRestaurant(id, admin);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @Post('restaurants/:id/reject')
+  @ApiBearerAuth()
+  rejectRestaurant(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @CurrentUser() admin: User,
+  ) {
+    return this.restaurantService.rejectRestaurant(id, admin, body?.reason);
   }
 }

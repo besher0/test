@@ -7,6 +7,7 @@ import { User } from 'src/user/user.entity';
 import { Category } from 'src/category/category.entity';
 import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 import { CountryModule } from 'src/country/country.module';
+import { NotificationModule } from 'src/notification/notification.module';
 import { Country } from 'src/country/county.entity';
 import { Rating } from 'src/rating/rating.entity';
 import { Meal } from 'src/meal/meal.entity';
@@ -33,6 +34,7 @@ import { DeliveryLocationController } from './delivery-location.controller';
     ]),
     CloudinaryModule,
     CountryModule,
+    NotificationModule,
   ],
   providers: [RestaurantService, FilterService],
   controllers: [RestaurantController, DeliveryLocationController],

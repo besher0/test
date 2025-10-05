@@ -119,6 +119,14 @@ export class CreateUserDto {
   @IsString()
   deviceType?: string;
 
+  @ApiProperty({ description: 'Optional latitude', required: false })
+  @IsOptional()
+  latitude?: number;
+
+  @ApiProperty({ description: 'Optional longitude', required: false })
+  @IsOptional()
+  longitude?: number;
+
   // @ApiProperty({
   //   description: 'Bio',
   //   required: false,

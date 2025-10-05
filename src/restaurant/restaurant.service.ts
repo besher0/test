@@ -20,6 +20,7 @@ import { RestaurantVideo } from './restaurant-video.entity';
 import { Follow } from 'src/follow/follow.entity';
 import { RestaurantProfileDto } from './dto/RestaurantProfileDto';
 import { DeliveryLocation } from './delivery-location.entity';
+import { NotificationService } from 'src/notification/notification.service';
 
 // واجهة Response مخصصة
 export interface RestaurantResponse extends Omit<Restaurant, 'owner'> {
@@ -56,6 +57,7 @@ export class RestaurantService {
     private readonly followRepo: Repository<Follow>,
     @InjectRepository(DeliveryLocation)
     private deliveryLocationRepo: Repository<DeliveryLocation>,
+    private notificationService: NotificationService,
   ) {}
 
   private mapOwner(user: User) {
@@ -127,8 +129,8 @@ export class RestaurantService {
 
   async findAll(type: BusinessType) {
     const restaurants = await this.restaurantRepo.find({
-      where: { type },
-      relations: ['owner', 'category'], // ✅ بس
+      where: { type, isActive: true },
+      relations: ['owner', 'category'],
     });
 
     return restaurants.map((r) => ({
@@ -153,6 +155,16 @@ export class RestaurantService {
 
     if (!restaurant) throw new NotFoundException(`${type} not found`);
 
+    // If restaurant is not active, only allow owner or admin to see it
+    if (!restaurant.isActive) {
+      if (!user) throw new NotFoundException(`${type} not found`);
+      const isOwner = restaurant.owner && user.id === restaurant.owner.id;
+      const isAdmin = user.userType === 'admin';
+      if (!isOwner && !isAdmin) {
+        throw new NotFoundException(`${type} not found`);
+      }
+    }
+
     return {
       id: restaurant.id,
       name: restaurant.name,
@@ -162,6 +174,11 @@ export class RestaurantService {
       averageRating: restaurant.averageRating,
       createdAt: restaurant.createdAt,
       updatedAt: restaurant.updatedAt,
+      isActive: restaurant.isActive,
+      approvedAt: restaurant.approvedAt ?? null,
+      approvedBy: restaurant.approvedBy
+        ? this.mapOwner(restaurant.approvedBy)
+        : null,
       owner: this.mapOwner(restaurant.owner),
       isLiked: user
         ? restaurant.likes.some((like) => like.user.id === user.id)
@@ -227,11 +244,25 @@ export class RestaurantService {
     return this.restaurantRepo.save(restaurant);
   }
 
-  async remove(id: string, type: BusinessType): Promise<void> {
+  async remove(
+    id: string,
+    type: BusinessType,
+    currentUser: User,
+  ): Promise<void> {
     const restaurant = await this.restaurantRepo.findOne({
       where: { id, type },
+      relations: ['owner'],
     });
     if (!restaurant) throw new NotFoundException(`${type} not found`);
+
+    // Only the owner or an admin can delete the restaurant
+    const isOwner =
+      restaurant.owner && currentUser && restaurant.owner.id === currentUser.id;
+    const isAdmin = currentUser && currentUser.userType === 'admin';
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenException('Not allowed');
+    }
+
     await this.restaurantRepo.remove(restaurant);
   }
 
@@ -240,7 +271,7 @@ export class RestaurantService {
     order: 'ASC' | 'DESC' = 'DESC',
   ) {
     const restaurants = await this.restaurantRepo.find({
-      where: { type },
+      where: { type, isActive: true },
       order: { averageRating: order },
       relations: ['meals', 'owner', 'category'],
       select: {
@@ -277,6 +308,8 @@ export class RestaurantService {
 
     if (!restaurant) throw new NotFoundException(`${type} not found`);
 
+    if (!restaurant.isActive) throw new NotFoundException(`${type} not found`);
+
     return {
       id: restaurant.id,
       name: restaurant.name,
@@ -308,9 +341,17 @@ export class RestaurantService {
   ): Promise<RestaurantProfileDto> {
     const restaurant = await this.restaurantRepo.findOne({
       where: { id: restaurantId, type },
+      relations: ['owner'],
     });
 
     if (!restaurant) throw new NotFoundException(`${type} not found`);
+
+    // If not active, allow only the owner to view the upper profile
+    if (!restaurant.isActive) {
+      if (!userId) throw new NotFoundException(`${type} not found`);
+      const isOwner = restaurant.owner && restaurant.owner.id === userId;
+      if (!isOwner) throw new NotFoundException(`${type} not found`);
+    }
 
     // عدد المتابعين
     const followersCount = await this.followRepo.count({
@@ -341,6 +382,8 @@ export class RestaurantService {
 
     if (!restaurant) throw new NotFoundException(`${type} not found`);
 
+    if (!restaurant.isActive) throw new NotFoundException(`${type} not found`);
+
     const ratings = await this.ratingRepo.find({
       where: { restaurant: { id: restaurantId } },
       relations: ['user'],
@@ -368,9 +411,17 @@ export class RestaurantService {
 
   async getRestaurantDishes(
     restaurantId: string,
-    type: 'restaurant' | 'store',
+    type: BusinessType,
     categoryId?: string,
   ) {
+    // verify restaurant exists and is active
+    const restaurant = await this.restaurantRepo.findOne({
+      where: { id: restaurantId, type },
+      select: ['id', 'isActive'],
+    });
+    if (!restaurant) throw new NotFoundException(`${type} not found`);
+    if (!restaurant.isActive) throw new NotFoundException(`${type} not found`);
+
     const query = this.mealRepo
       .createQueryBuilder('meal')
       .leftJoinAndSelect('meal.restaurant', 'restaurant')
@@ -386,12 +437,75 @@ export class RestaurantService {
     return { meals };
   }
 
+  // Admin approves a restaurant -> marks active and notifies owner
+  async approveRestaurant(id: string, adminUser: User) {
+    const restaurant = await this.restaurantRepo.findOne({
+      where: { id },
+      relations: ['owner'],
+    });
+    if (!restaurant) throw new NotFoundException('Restaurant not found');
+
+    const admin = await this.userRepo.findOne({ where: { id: adminUser.id } });
+    restaurant.isActive = true;
+    restaurant.approvedAt = new Date();
+    restaurant.approvedBy = admin || null;
+
+    const saved = await this.restaurantRepo.save(restaurant);
+
+    // send notification to owner
+    try {
+      if (restaurant.owner && restaurant.owner.id) {
+        await this.notificationService.sendToUser(
+          restaurant.owner.id,
+          'تم قبول مطعمك',
+          'تم قبول مطعمك في التطبيق وأصبح الآن ظاهر للمستخدمين',
+        );
+      }
+    } catch (e) {
+      // ignore notification errors
+      console.warn('Failed to send approval notification', e);
+    }
+
+    return saved;
+  }
+
+  // Admin rejects a restaurant -> keep inactive and notify owner (optional reason)
+  async rejectRestaurant(id: string, adminUser: User, reason?: string) {
+    const restaurant = await this.restaurantRepo.findOne({
+      where: { id },
+      relations: ['owner'],
+    });
+    if (!restaurant) throw new NotFoundException('Restaurant not found');
+
+    const admin = await this.userRepo.findOne({ where: { id: adminUser.id } });
+    restaurant.isActive = false;
+    restaurant.approvedAt = null;
+    restaurant.approvedBy = admin || null;
+
+    const saved = await this.restaurantRepo.save(restaurant);
+
+    try {
+      if (restaurant.owner && restaurant.owner.id) {
+        await this.notificationService.sendToUser(
+          restaurant.owner.id,
+          'تم رفض مطعمك',
+          reason || 'تم رفض تسجيل مطعمك، يمكنك تعديل البيانات وإعادة المحاولة',
+        );
+      }
+    } catch (e) {
+      console.warn('Failed to send rejection notification', e);
+    }
+
+    return saved;
+  }
+
   async getImages(restaurantId: string, type: BusinessType) {
     const restaurant = await this.restaurantRepo.findOne({
       where: { id: restaurantId, type },
       relations: ['images'],
     });
     if (!restaurant) throw new NotFoundException(`${type} not found`);
+    if (!restaurant.isActive) throw new NotFoundException(`${type} not found`);
     return { images: restaurant.images };
   }
 
@@ -444,6 +558,7 @@ export class RestaurantService {
       relations: ['videos'],
     });
     if (!restaurant) throw new NotFoundException(`${type} not found`);
+    if (!restaurant.isActive) throw new NotFoundException(`${type} not found`);
     return { videos: restaurant.videos };
   }
 
@@ -528,6 +643,18 @@ export class RestaurantService {
   async getDeliveryLocations(
     restaurantId: string,
   ): Promise<DeliveryLocation[]> {
+    // ensure restaurant exists and is active for public access
+    const restaurant = await this.restaurantRepo.findOne({
+      where: { id: restaurantId },
+      select: ['id', 'isActive'],
+    });
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+    if (!restaurant.isActive) {
+      throw new NotFoundException('Restaurant not found');
+    }
+
     return this.deliveryLocationRepo.find({
       where: { restaurant: { id: restaurantId } },
     });

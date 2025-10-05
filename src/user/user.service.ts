@@ -55,6 +55,8 @@ export class UserService {
       profile_picture: createUserDto.profile_picture,
       userType: createUserDto.userType || 'normalUser',
       favoriteFood: favoriteCategory ?? undefined,
+      latitude: createUserDto.latitude ?? undefined,
+      longitude: createUserDto.longitude ?? undefined,
     });
     console.log('DTO userType:', createUserDto.userType);
 

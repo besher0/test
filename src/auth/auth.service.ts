@@ -51,6 +51,8 @@ export class AuthService {
       }
     }
 
+    // do not persist coordinates on login anymore (handled at registration/update)
+
     return result;
   }
 

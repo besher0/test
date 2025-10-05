@@ -8,6 +8,7 @@ import { Restaurant } from '../restaurant/restaurant.entity';
 import { Category } from '../category/category.entity';
 import { Country } from '../country/county.entity';
 import { Post } from '../post/post.entity';
+import { RestaurantModule } from '../restaurant/restaurant.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { Post } from '../post/post.entity';
       Country,
       Post,
     ]),
+    RestaurantModule,
   ],
   controllers: [DashboardController],
   providers: [DashboardService],

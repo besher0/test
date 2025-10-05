@@ -70,6 +70,34 @@ export class Order {
   })
   status: string;
 
+  // معلومات الدفع الإلكتروني
+  @ApiProperty({
+    example: 'UNPAID',
+    enum: ['UNPAID', 'PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+  })
+  @Column({
+    type: 'enum',
+    enum: ['UNPAID', 'PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+    default: 'UNPAID',
+  })
+  paymentStatus: string;
+
+  @ApiProperty({
+    example: '5O190127TN364715T',
+    required: false,
+    description: 'PayPal order id',
+  })
+  @Column({ type: 'varchar', nullable: true })
+  paypalOrderId?: string | null;
+
+  @ApiProperty({
+    example: '2GG279541U471931P',
+    required: false,
+    description: 'PayPal capture id',
+  })
+  @Column({ type: 'varchar', nullable: true })
+  paypalCaptureId?: string | null;
+
   @ApiProperty({ example: '2025-09-22T12:39:00.000Z' })
   @CreateDateColumn()
   createdAt: Date;

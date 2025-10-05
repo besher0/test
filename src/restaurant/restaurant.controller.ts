@@ -32,6 +32,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
 import { RestaurantGuard } from 'src/auth/guards/restaurant.guard';
+// ...existing code... (removed unused Roles and RolesGuard imports)
 import {
   FileFieldsInterceptor,
   FileInterceptor,
@@ -129,13 +130,23 @@ export class RestaurantController {
     @Query('type') type?: BusinessType,
     @Query('category') category?: string,
     @Query('search') search?: string,
+    @Query('page') page?: string,
   ) {
     if (!type) {
       throw new BadRequestException(
         'type is required and must be restaurant or store',
       );
     }
-    return this.filterService.getMeals(type, user?.id, category, search);
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    // server enforces only active restaurants' meals
+    return this.filterService.getMeals(
+      type,
+      user?.id,
+      category,
+      search,
+      pageNum,
+      8,
+    );
   }
 
   @Get(':id')
@@ -150,7 +161,6 @@ export class RestaurantController {
   ) {
     return this.restaurantService.findOne(id, type, user);
   }
-  //
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -212,8 +222,14 @@ export class RestaurantController {
   @ApiOperation({ summary: 'Delete a restaurant/store' })
   @ApiQuery({ name: 'type', enum: BusinessType, required: true })
   @ApiOkResponse({ schema: { example: { message: 'Deleted successfully' } } })
-  remove(@Param('id') id: string, @Query('type') type: BusinessType) {
-    return this.restaurantService.remove(id, type);
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  remove(
+    @Param('id') id: string,
+    @Query('type') type: BusinessType,
+    @CurrentUser() user: User,
+  ) {
+    return this.restaurantService.remove(id, type, user);
   }
 
   // restaurant.controller.ts
@@ -349,8 +365,17 @@ export class RestaurantController {
     @CurrentUser() user: User,
     @Query('category') category?: string,
     @Query('search') search?: string,
+    @Query('page') page?: string,
   ) {
-    return this.filterService.getRestaurants(type, user?.id, category, search);
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    return this.filterService.getRestaurants(
+      type,
+      user?.id,
+      category,
+      search,
+      pageNum,
+      8,
+    );
   }
 }
 

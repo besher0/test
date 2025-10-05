@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from './order.entity';
@@ -8,6 +12,7 @@ import { Meal } from 'src/meal/meal.entity';
 import { DeliveryLocation } from 'src/restaurant/delivery-location.entity';
 import { User } from 'src/user/user.entity';
 import { CreateOrderDto } from './dto/dto.create.order';
+import { PayPalService } from 'src/paypal/paypal.service';
 
 @Injectable()
 export class OrderService {
@@ -19,6 +24,7 @@ export class OrderService {
     @InjectRepository(DeliveryLocation)
     private deliveryLocationRepo: Repository<DeliveryLocation>,
     private cartService: CartService,
+    private readonly paypalService: PayPalService,
   ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto): Promise<Order> {
@@ -100,7 +106,22 @@ export class OrderService {
   async updateStatus(orderId: string, status: string): Promise<Order> {
     const order = await this.orderRepo.findOne({ where: { id: orderId } });
     if (!order) throw new NotFoundException('Order not found');
+    // إذا تم التأكيد ونوع الدفع PayPal ولم يتم الدفع بعد، نفذ الالتقاط
+    const prevStatus = order.status;
     order.status = status;
-    return this.orderRepo.save(order);
+    const saved = await this.orderRepo.save(order);
+
+    if (
+      prevStatus !== 'CONFIRMED' &&
+      status === 'CONFIRMED' &&
+      order.paymentStatus !== 'PAID'
+    ) {
+      if (!order.paypalOrderId) {
+        throw new BadRequestException('No PayPal order linked to this order');
+      }
+      await this.paypalService.capturePaypalForOrder(order.id);
+      // سيتم تحديث الحقول داخل PayPalService
+    }
+    return saved;
   }
 }

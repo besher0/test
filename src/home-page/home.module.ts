@@ -11,6 +11,8 @@ import { Post } from '../post/post.entity';
 import { PostReaction } from '../post/post-reaction.entity';
 import { Story } from '../story/story.entity';
 import { Follow } from '../follow/follow.entity';
+import { Order } from '../order/order.entity';
+import { DeliveryLocation } from '../restaurant/delivery-location.entity';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { Follow } from '../follow/follow.entity';
       PostReaction,
       Story,
       Follow,
+      Order,
+      DeliveryLocation,
     ]),
   ],
   controllers: [HomeController],

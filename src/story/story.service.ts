@@ -84,13 +84,17 @@ export class StoryService {
     }
 
     // ======= create story: pass only restaurant id to satisfy DeepPartial typing =======
+    // TTL (in hours) for stories. Default: 96 hours = 4 days.
+    const ttlHours = parseInt(process.env.STORY_TTL_HOURS || '96', 10);
+    const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
+
     const story = this.storyRepo.create({
       text: dto.text,
       mediaUrl,
       thumbnailUrl,
       restaurant: { id: restaurant.id }, // <-- important: partial object with id only
       businessType: type,
-      expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+      expiresAt,
     });
 
     return this.storyRepo.save(story);

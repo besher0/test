@@ -59,6 +59,9 @@ export class FilterService {
       query.andWhere('country.name ILIKE :search', { search: `%${search}%` });
     }
 
+    // only show countries that have active restaurants of this business type
+    query.andWhere('restaurant.isActive = true');
+
     return query.getMany();
   }
 
@@ -67,6 +70,8 @@ export class FilterService {
     userId?: string,
     category?: string,
     search?: string,
+    page: number = 1,
+    limit: number = 8,
   ) {
     const query = this.mealRepo
       .createQueryBuilder('meal')
@@ -94,12 +99,45 @@ export class FilterService {
       }, 'isLiked');
     }
 
-    const meals = await query.getRawAndEntities();
+    // only meals from active restaurants
+    query.andWhere('restaurant.isActive = true');
 
-    return meals.entities.map((meal, idx) => ({
-      ...meal,
-      isLiked: userId ? this.parseIsLiked(meals.raw[idx]) : false,
-    }));
+    // pagination
+    const skip = (page - 1) * limit;
+    query.skip(skip).take(limit);
+
+    const [entities, total] = await query.getManyAndCount();
+
+    // need raw for isLiked detection; run a parallel raw fetch when userId is provided
+    if (userId) {
+      const raw = await query
+        .select(['meal.id'])
+        .addSelect((subQuery) => {
+          return subQuery
+            .select('COUNT(1)')
+            .from('like', 'ml')
+            .where('ml.mealId = meal.id')
+            .andWhere('ml.userId = :userId', { userId });
+        }, 'isLiked')
+        .getRawMany();
+
+      return {
+        items: entities.map((meal, idx) => ({
+          ...meal,
+          isLiked: this.parseIsLiked(raw[idx]),
+        })),
+        total,
+        page,
+        limit,
+      };
+    }
+
+    return {
+      items: entities.map((meal) => ({ ...meal, isLiked: false })),
+      total,
+      page,
+      limit,
+    };
   }
 
   async getRestaurants(
@@ -107,6 +145,8 @@ export class FilterService {
     userId?: string,
     category?: string,
     search?: string,
+    page: number = 1,
+    limit: number = 8,
   ) {
     const query = this.restaurantRepo
       .createQueryBuilder('restaurant')
@@ -136,11 +176,42 @@ export class FilterService {
       }, 'isLiked');
     }
 
-    const restaurants = await query.getRawAndEntities();
+    // only active restaurants
+    query.andWhere('restaurant.isActive = true');
 
-    return restaurants.entities.map((restaurant, idx) => ({
-      ...restaurant,
-      isLiked: userId ? this.parseIsLiked(restaurants.raw[idx]) : false,
-    }));
+    const skip = (page - 1) * limit;
+    query.skip(skip).take(limit);
+
+    const [entities, total] = await query.getManyAndCount();
+
+    if (userId) {
+      const raw = await query
+        .select(['restaurant.id'])
+        .addSelect((subQuery) => {
+          return subQuery
+            .select('COUNT(1)')
+            .from('like', 'rl')
+            .where('rl.restaurantId = restaurant.id')
+            .andWhere('rl.userId = :userId', { userId });
+        }, 'isLiked')
+        .getRawMany();
+
+      return {
+        items: entities.map((restaurant, idx) => ({
+          ...restaurant,
+          isLiked: this.parseIsLiked(raw[idx]),
+        })),
+        total,
+        page,
+        limit,
+      };
+    }
+
+    return {
+      items: entities.map((restaurant) => ({ ...restaurant, isLiked: false })),
+      total,
+      page,
+      limit,
+    };
   }
 }
