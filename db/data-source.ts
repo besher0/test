@@ -29,7 +29,7 @@ config({ path: '.env' });
 // data source options
 export const dataSourceOptions: DataSourceOptions = {
     type: 'postgres',
-    url:  'postgresql://neondb_owner:npg_B3SD1CtAOyMq@ep-gentle-violet-a7rfsa0h-pooler.ap-southeast-2.aws.neon.tech/from-house2?sslmode=require&channel_binding=require',
+    url:  'postgresql://neondb_owner:npg_B3SD1CtAOyMq@ep-gentle-violet-a7rfsa0h-pooler.ap-southeast-2.aws.neon.tech/from-house2?sslmode=require',
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     synchronize: true,
     migrations: ["dist/db/migrations/*.js"]
