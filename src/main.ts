@@ -3,9 +3,15 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 import * as dotenv from 'dotenv';
+import { setDefaultResultOrder } from 'node:dns';
 
 async function bootstrap() {
   dotenv.config();
+  // Prefer IPv4 first to avoid ENETUNREACH on servers without IPv6 egress
+  try {
+    setDefaultResultOrder('ipv4first');
+    // eslint-disable-next-line no-empty
+  } catch {}
   const app = await NestFactory.create(AppModule, { cors: true });
 
   const config = new DocumentBuilder()
@@ -16,6 +22,7 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
+  console.log('DB_URL from env:', process.env.DATABASE_URL);
 
   await app.listen(process.env.PORT || 3000);
 }

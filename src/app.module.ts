@@ -7,7 +7,7 @@ import { CategoryModule } from './category/category.module';
 
 import { VideoModule } from './cloudinary.video/video.module';
 
-import { dataSourceOptions } from '../db/data-source';
+import dataSource from '../db/data-source';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { RestaurantModule } from './restaurant/restaurant.module';
@@ -29,7 +29,13 @@ import { PayPalModule } from './paypal/paypal.module';
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       isGlobal: true,
     }),
-    TypeOrmModule.forRoot(dataSourceOptions),
+    TypeOrmModule.forRootAsync({
+      useFactory: async () => ({
+        ...dataSource.options,
+        retryAttempts: 0, // لمنع retry الذي يسبب AggregateError
+        retryDelay: 0,
+      }),
+    }),
     UserModule,
     VideoModule,
     CategoryModule,
