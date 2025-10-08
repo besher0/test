@@ -83,15 +83,16 @@ export class HomeService {
     }
     const arabicKitchens = await this.countryRepo
       .createQueryBuilder('country')
-      .innerJoin(
+      // Use LEFT JOIN so countries without restaurants are still returned
+      .leftJoinAndSelect(
         'country.restaurants',
         'restaurant',
-        'restaurant.type = :businessType AND restaurant.isActive = true',
-        { businessType },
+        'restaurant.isActive = true',
       )
-      .leftJoinAndSelect('country.likes', 'like')
-      .leftJoinAndSelect('like.user', 'likeUser')
+      .leftJoinAndSelect('country.likes', 'countryLike')
+      .leftJoinAndSelect('countryLike.user', 'likeUser')
       .orderBy('country.name', 'ASC')
+      .distinct(true)
       .take(7)
       .getMany();
 
