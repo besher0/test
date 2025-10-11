@@ -81,20 +81,44 @@ export class HomeService {
         .of(meal) // ⬅️ يجيب likes الخاصة بالـ meal هذا
         .loadMany();
     }
-    const arabicKitchens = await this.countryRepo
+    const qb = this.countryRepo
       .createQueryBuilder('country')
-      // Use LEFT JOIN so countries without restaurants are still returned
       .leftJoinAndSelect(
         'country.restaurants',
         'restaurant',
-        'restaurant.isActive = true',
+        'restaurant.isActive = :isActive',
+        { isActive: true },
       )
       .leftJoinAndSelect('country.likes', 'countryLike')
       .leftJoinAndSelect('countryLike.user', 'likeUser')
       .orderBy('country.name', 'ASC')
       .distinct(true)
-      .take(7)
-      .getMany();
+      .take(7);
+
+    try {
+      const [sql, params] = qb.getQueryAndParameters();
+      console.log('[DEBUG arabicKitchens SQL]', sql);
+      console.log('[DEBUG arabicKitchens params]', params);
+
+      const totalCountries = await this.countryRepo.count();
+      console.log('[DEBUG countries count]', totalCountries);
+
+      const countriesWithActiveRestaurants = await this.countryRepo
+        .createQueryBuilder('country')
+        .leftJoin('country.restaurants', 'r', 'r.isActive = :isActive', {
+          isActive: true,
+        })
+        .where('r.id IS NOT NULL')
+        .getCount();
+      console.log(
+        '[DEBUG countries with active restaurants]',
+        countriesWithActiveRestaurants,
+      );
+    } catch (err) {
+      console.warn('[DEBUG arabicKitchens debug failed]', String(err ?? ''));
+    }
+
+    const arabicKitchens = await qb.getMany();
 
     const topRestaurants = await this.restRepo
       .createQueryBuilder('restaurant')
