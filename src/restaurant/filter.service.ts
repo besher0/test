@@ -41,26 +41,46 @@ export class FilterService {
   ) {
     const query = this.countryRepo
       .createQueryBuilder('country')
-      .leftJoin('country.restaurants', 'restaurant')
-      .leftJoin('restaurant.category', 'category')
-      .where('restaurant.type = :type', { type })
-      .loadRelationCountAndMap(
-        'country.restaurantsCount',
+      // keep countries even if no restaurants (conditions moved to the JOIN)
+      .leftJoin(
         'country.restaurants',
+        'restaurant',
+        'restaurant.type = :type AND restaurant.isActive = true',
+        { type },
       );
 
     if (category) {
-      query.andWhere('category.name ILIKE :category', {
-        category: `%${category}%`,
-      });
+      // apply category filter to the join, not WHERE, to keep countries with zero matches
+      query.leftJoin(
+        'restaurant.category',
+        'category',
+        'category.name ILIKE :category',
+        { category: `%${category}%` },
+      );
+    } else {
+      query.leftJoin('restaurant.category', 'category');
     }
 
+    // search by country name (safe to keep in WHERE)
     if (search) {
       query.andWhere('country.name ILIKE :search', { search: `%${search}%` });
     }
 
-    // only show countries that have active restaurants of this business type
-    query.andWhere('restaurant.isActive = true');
+    // Map count of matching restaurants (active + type, and category if provided) into country.restaurantsCount
+    query.loadRelationCountAndMap(
+      'country.restaurantsCount',
+      'country.restaurants',
+      'r',
+      (qb) => {
+        qb.where('r.type = :type', { type }).andWhere('r.isActive = true');
+        if (category) {
+          qb.leftJoin('r.category', 'c').andWhere('c.name ILIKE :category', {
+            category: `%${category}%`,
+          });
+        }
+        return qb;
+      },
+    );
 
     return query.getMany();
   }
