@@ -41,7 +41,6 @@ export class FilterService {
   ) {
     const query = this.countryRepo
       .createQueryBuilder('country')
-      // keep countries even if no restaurants (conditions moved to the JOIN)
       .leftJoin(
         'country.restaurants',
         'restaurant',
@@ -50,7 +49,6 @@ export class FilterService {
       );
 
     if (category) {
-      // apply category filter to the join, not WHERE, to keep countries with zero matches
       query.leftJoin(
         'restaurant.category',
         'category',

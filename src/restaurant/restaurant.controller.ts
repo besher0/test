@@ -110,12 +110,17 @@ export class RestaurantController {
     description: 'كلمة للبحث داخل اسم الدولة',
   })
   @ApiQuery({ name: 'type', enum: BusinessType, required: true })
-  getCountries(
+  async getCountries(
     @Query('type') type: BusinessType,
     @Query('category') category?: string,
     @Query('search') search?: string,
   ) {
-    return this.filterService.getCountries(type, category, search);
+    const countries = await this.filterService.getCountries(
+      type,
+      category,
+      search,
+    );
+    return { country: countries };
   }
 
   @ApiBearerAuth()
