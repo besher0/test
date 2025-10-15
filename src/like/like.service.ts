@@ -73,13 +73,19 @@ async getMealLikes(user: User, type: BusinessType) {
         meal: { id: Not(IsNull()) },
         type
       },
-      relations: ['meal'],
+      relations: ['meal','meal.restaurant'],
     });
 return {
     meals: likes.map((like) => ({
       id: like.meal.id,
       name: like.meal.name,
-      imageUrl: like.meal.image_url || undefined,
+      image: like.meal.image_url || undefined,
+      restaurant:{
+        id: like.meal.restaurant.id,
+        name: like.meal.restaurant.name,
+        image: like.meal.restaurant.mainImage|| undefined,
+        logoUrl: like.meal.restaurant.logo_url || undefined,
+      },
       isLiked: true,
     })),
 };
@@ -109,16 +115,39 @@ async getCountryLikes(user: User) {
   const likes = await this.likeRepo.find({
     where: {
       user: { id: user.id },
-      country: { id: Not(IsNull()) }, // مثل ما عملت مع المطاعم بس هون للدول
+      country: { id: Not(IsNull()) },
     },
     relations: ['country'],
   });
+
+  // احسب عدد المطاعم لكل دولة عبر استعلام مجمّع لمرة واحدة
+  const countryIds = likes
+    .map((l) => l.country?.id)
+    .filter((id): id is string => Boolean(id));
+
+  let countsByCountryId = new Map<string, number>();
+  if (countryIds.length > 0) {
+    const rows = await this.restRepo
+      .createQueryBuilder('restaurant')
+      .select('restaurant.countryId', 'countryId')
+      .addSelect('COUNT(1)', 'cnt')
+      .where('restaurant.countryId IN (:...countryIds)', { countryIds })
+      .andWhere('restaurant.isActive = true')
+      .groupBy('restaurant.countryId')
+      .getRawMany<{ countryId: string; cnt: string }>();
+
+    countsByCountryId = new Map(
+      rows.map((r) => [r.countryId, parseInt(r.cnt, 10) || 0]),
+    );
+  }
 
   return {
     countries: likes.map((like) => ({
       id: like.country.id,
       name: like.country.name,
       imageUrl: like.country.imageUrl || undefined,
+      logoImage: like.country.logoImage || undefined,
+      restaurantsCount: countsByCountryId.get(like.country.id) || 0,
       isLiked: true,
     })),
   };

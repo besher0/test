@@ -158,7 +158,7 @@ export class MealService {
       return {
         id: meal.id,
         name: meal.name,
-        imageUrl: meal.image_url,
+        image: meal.image_url,
         restaurant: restaurantFull,
         category: {
           id: meal.category?.id,
@@ -184,10 +184,15 @@ export class MealService {
     return {
       id: meal.id,
       name: meal.name,
-      imageUrl: meal.image_url,
+      image: meal.image_url,
+      description: meal.description,
+      price: meal.price,
+      preparationTime: meal.preparationTime,
       restaurant: {
         id: meal.restaurant?.id,
         name: meal.restaurant?.name,
+        image: meal.restaurant.mainImage,
+        logoUrl: meal.restaurant.logo_url,
       },
       category: {
         id: meal.category?.id,

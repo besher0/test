@@ -297,7 +297,12 @@ export class HomeService {
         image: meal.image_url,
         duration: meal.preparationTime,
         restaurant: meal.restaurant
-          ? { id: meal.restaurant.id, name: meal.restaurant.name }
+          ? {
+              id: meal.restaurant.id,
+              name: meal.restaurant.name,
+              image: meal.restaurant.mainImage,
+              logoUrl: meal.restaurant.logo_url,
+            }
           : null,
         isLiked: userId ? meal.likes.some((l) => l.user.id === userId) : false,
         likesCount: meal.likes ? meal.likes.length : 0,
@@ -315,6 +320,7 @@ export class HomeService {
         id: r.id,
         name: r.name,
         logoUrl: r.logo_url,
+        Image: r.mainImage,
         description: r.description,
         rating: r.averageRating,
         isLiked: userId ? r.likes.some((l) => l.user?.id === userId) : false,

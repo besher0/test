@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Like } from 'src/like/like.entity';
 import { Meal } from '../meal/meal.entity';
 import { Country } from '../country/county.entity';
 import { Restaurant } from './restaurant.entity';
@@ -12,6 +13,7 @@ export class FilterService {
     @InjectRepository(Country) private countryRepo: Repository<Country>,
     @InjectRepository(Restaurant)
     private restaurantRepo: Repository<Restaurant>,
+    @InjectRepository(Like) private likeRepo: Repository<Like>,
   ) {}
 
   // helper to safely parse isLiked from raw result row
@@ -38,6 +40,7 @@ export class FilterService {
     type: 'restaurant' | 'store',
     category?: string,
     search?: string,
+    userId?: string,
   ) {
     const query = this.countryRepo
       .createQueryBuilder('country')
@@ -79,8 +82,27 @@ export class FilterService {
         return qb;
       },
     );
+    type CountryWithCount = Country & { restaurantsCount?: number };
+    const countries = (await query.getMany()) as CountryWithCount[];
 
-    return query.getMany();
+    let likedSet: Set<string> | undefined;
+    if (userId) {
+      const likedRows = await this.likeRepo
+        .createQueryBuilder('l')
+        .select('l.countryId', 'countryId')
+        .where('l.userId = :userId', { userId })
+        .getRawMany<{ countryId: string }>();
+      likedSet = new Set(likedRows.map((r) => r.countryId));
+    }
+
+    return countries.map((c: CountryWithCount) => ({
+      id: c.id,
+      name: c.name,
+      imageUrl: c.imageUrl ?? null,
+      logoImage: c.logoImage ?? null,
+      restaurantsCount: c.restaurantsCount ?? 0,
+      isLiked: likedSet ? likedSet.has(c.id) : false,
+    }));
   }
 
   async getMeals(
@@ -126,7 +148,26 @@ export class FilterService {
 
     const [entities, total] = await query.getManyAndCount();
 
-    // need raw for isLiked detection; run a parallel raw fetch when userId is provided
+    // helper to format meal output
+    function formatMeal(meal: Meal, isLiked: boolean) {
+      return {
+        id: meal.id,
+        name: meal.name,
+        image: meal.image_url,
+        restaurant: {
+          id: meal.restaurant?.id,
+          name: meal.restaurant?.name,
+          image: meal.restaurant?.mainImage,
+          logoUrl: meal.restaurant?.logo_url,
+        },
+        category: {
+          id: meal.category?.id,
+          name: meal.category?.name,
+        },
+        isLiked,
+      };
+    }
+
     if (userId) {
       const raw = await query
         .select(['meal.id'])
@@ -140,10 +181,9 @@ export class FilterService {
         .getRawMany();
 
       return {
-        items: entities.map((meal, idx) => ({
-          ...meal,
-          isLiked: this.parseIsLiked(raw[idx]),
-        })),
+        items: entities.map((meal, idx) =>
+          formatMeal(meal, this.parseIsLiked(raw[idx])),
+        ),
         total,
         page,
         limit,
@@ -151,7 +191,7 @@ export class FilterService {
     }
 
     return {
-      items: entities.map((meal) => ({ ...meal, isLiked: false })),
+      items: entities.map((meal) => formatMeal(meal, false)),
       total,
       page,
       limit,

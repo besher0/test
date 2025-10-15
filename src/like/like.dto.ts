@@ -56,7 +56,7 @@ export class MealLikeDto {
   name: string;
 
   @ApiProperty({ example: 'https://res.cloudinary.com/.../meals/kabsa.png' })
-  imageUrl?: string;
+  image?: string;
 
   @ApiProperty({
     example: true,

@@ -96,6 +96,8 @@ export class RestaurantController {
   //   }
 
   @Get('countries')
+  @ApiBearerAuth()
+  @UseGuards(OptionalAuthGuard)
   @ApiOperation({ summary: 'جلب قائمة الدول مع الفلترة والبحث' })
   @ApiQuery({
     name: 'category',
@@ -111,6 +113,7 @@ export class RestaurantController {
   })
   @ApiQuery({ name: 'type', enum: BusinessType, required: true })
   async getCountries(
+    @CurrentUser() user: User | undefined,
     @Query('type') type: BusinessType,
     @Query('category') category?: string,
     @Query('search') search?: string,
@@ -119,6 +122,7 @@ export class RestaurantController {
       type,
       category,
       search,
+      user?.id,
     );
     return { country: countries };
   }
