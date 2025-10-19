@@ -21,6 +21,10 @@ export class OrderItem {
   @Column('decimal', { precision: 10, scale: 2 })
   price: number;
 
+  @ApiProperty({ required: false, example: 'بدون فلفل' })
+  @Column({ type: 'varchar', nullable: true })
+  note?: string | null;
+
   @ManyToOne(() => Order, (order) => order.items, { onDelete: 'CASCADE' })
   order: Order;
 }

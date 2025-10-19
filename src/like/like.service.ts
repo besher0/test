@@ -66,64 +66,85 @@ async toggleLike(user: User, targetId: string, type?: BusinessType) {
   return { isLiked: true, message: `تم تسجيل الإعجاب بـ ${type} بنجاح` };
 }
 
-async getMealLikes(user: User, type: BusinessType) {
-    const likes = await this.likeRepo.find({
-      where: {
-        user: { id: user.id },
-        meal: { id: Not(IsNull()) },
-        type
-      },
-      relations: ['meal','meal.restaurant'],
-    });
-return {
-    meals: likes.map((like) => ({
-      id: like.meal.id,
-      name: like.meal.name,
-      image: like.meal.image_url || undefined,
-      restaurant:{
-        id: like.meal.restaurant.id,
-        name: like.meal.restaurant.name,
-        image: like.meal.restaurant.mainImage|| undefined,
-        logoUrl: like.meal.restaurant.logo_url || undefined,
-      },
-      isLiked: true,
-    })),
-};
+async getMealLikes(user: User, type: BusinessType, page = 1) {
+  const take = 8;
+  const [likes, total] = await this.likeRepo.findAndCount({
+    where: {
+      user: { id: user.id },
+      meal: { id: Not(IsNull()) },
+      type,
+    },
+    relations: ['meal', 'meal.restaurant'],
+    order: { createdAt: 'DESC' },
+    take,
+    skip: (page - 1) * take,
+  });
 
-}
-
-async getRestaurantLikes(user: User, type: BusinessType) {
-    const likes = await this.likeRepo.find({
-      where: {
-        user: { id: user.id },
-        restaurant: { id: Not(IsNull()) },
-        type
-      },
-      relations: ['restaurant'],
-    });
+  const meals = likes.map((like) => ({
+    id: like.meal.id,
+    name: like.meal.name,
+    image: like.meal.image_url || undefined,
+    restaurant: {
+      id: like.meal.restaurant.id,
+      name: like.meal.restaurant.name,
+      image: like.meal.restaurant.mainImage || undefined,
+      logoUrl: like.meal.restaurant.logo_url || undefined,
+    },
+    isLiked: true,
+  }));
 
   return {
-    restaurants: likes.map((like) => ({
-      // نحتفظ بكيان المطعم كما هو، ونضيف حقل isLiked
-      ...like.restaurant,
-      isLiked: true,
-    })),
+    page,
+    perPage: take,
+    total,
+    totalPages: Math.ceil(total / take),
+    meals,
   };
 }
 
-async getCountryLikes(user: User) {
-  const likes = await this.likeRepo.find({
+async getRestaurantLikes(user: User, type: BusinessType, page = 1) {
+  const take = 8;
+  const [likes, total] = await this.likeRepo.findAndCount({
+    where: {
+      user: { id: user.id },
+      restaurant: { id: Not(IsNull()) },
+      type,
+    },
+    relations: ['restaurant'],
+    order: { createdAt: 'DESC' },
+    take,
+    skip: (page - 1) * take,
+  });
+
+  const restaurants = likes.map((like) => ({
+    ...like.restaurant,
+    isLiked: true,
+  }));
+
+  return {
+    page,
+    perPage: take,
+    total,
+    totalPages: Math.ceil(total / take),
+    restaurants,
+  };
+}
+
+async getCountryLikes(user: User, page = 1) {
+  const take = 8;
+  const [likes, total] = await this.likeRepo.findAndCount({
     where: {
       user: { id: user.id },
       country: { id: Not(IsNull()) },
     },
     relations: ['country'],
+    order: { createdAt: 'DESC' },
+    take,
+    skip: (page - 1) * take,
   });
 
   // احسب عدد المطاعم لكل دولة عبر استعلام مجمّع لمرة واحدة
-  const countryIds = likes
-    .map((l) => l.country?.id)
-    .filter((id): id is string => Boolean(id));
+  const countryIds = likes.map((l) => l.country?.id).filter((id): id is string => Boolean(id));
 
   let countsByCountryId = new Map<string, number>();
   if (countryIds.length > 0) {
@@ -141,15 +162,21 @@ async getCountryLikes(user: User) {
     );
   }
 
+  const countries = likes.map((like) => ({
+    id: like.country.id,
+    name: like.country.name,
+    imageUrl: like.country.imageUrl || undefined,
+    logoImage: like.country.logoImage || undefined,
+    restaurantsCount: countsByCountryId.get(like.country.id) || 0,
+    isLiked: true,
+  }));
+
   return {
-    countries: likes.map((like) => ({
-      id: like.country.id,
-      name: like.country.name,
-      imageUrl: like.country.imageUrl || undefined,
-      logoImage: like.country.logoImage || undefined,
-      restaurantsCount: countsByCountryId.get(like.country.id) || 0,
-      isLiked: true,
-    })),
+    page,
+    perPage: take,
+    total,
+    totalPages: Math.ceil(total / take),
+    countries,
   };
 }
 }

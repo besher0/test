@@ -27,19 +27,19 @@ export class UserService {
     }
 
     // تحقق من الأكلة المفضلة إذا كانت موجودة
-    let favoriteCategory: Category | null = null;
-    if (createUserDto.favoriteFood) {
-      favoriteCategory = await this.categoryRepository.findOne({
-        where: { id: createUserDto.favoriteFood },
-      });
+    // let favoriteCategory: Category | null = null;
+    // if (createUserDto.favoriteFood) {
+    //   favoriteCategory = await this.categoryRepository.findOne({
+    //     where: { id: createUserDto.favoriteFood },
+    //   });
 
-      if (!favoriteCategory) {
-        throw new HttpException(
-          'Favorite food category not found',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-    }
+    //   if (!favoriteCategory) {
+    //     throw new HttpException(
+    //       'Favorite food category not found',
+    //       HttpStatus.BAD_REQUEST,
+    //     );
+    //   }
+    // }
 
     // تشفير كلمة المرور
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
@@ -54,7 +54,7 @@ export class UserService {
       password: hashedPassword,
       profile_picture: createUserDto.profile_picture,
       userType: createUserDto.userType || 'normalUser',
-      favoriteFood: favoriteCategory ?? undefined,
+      // favoriteFood: favoriteCategory ?? undefined,
       latitude: createUserDto.latitude ?? undefined,
       longitude: createUserDto.longitude ?? undefined,
     });
@@ -78,20 +78,17 @@ export class UserService {
   async findById(id: string): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id },
-      relations: ['favoriteFood'],
+      // relations: ['favoriteFood'],
     });
 
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
-
     return user;
   }
 
   async findAll(): Promise<User[]> {
-    return this.userRepository.find({
-      relations: ['favoriteFood'], // إذا بدك تجيب الأكلة المفضلة كمان
-    });
+    return this.userRepository.find();
   }
 
   // إحضار مستخدم حسب Email
@@ -113,20 +110,20 @@ export class UserService {
       user.password = await bcrypt.hash(updateData.password, 10);
     }
 
-    if (updateData.favoriteFood) {
-      const favoriteCategory = await this.categoryRepository.findOne({
-        where: { id: updateData.favoriteFood },
-      });
+    // if (updateData.favoriteFood) {
+    //   const favoriteCategory = await this.categoryRepository.findOne({
+    //     where: { id: updateData.favoriteFood },
+    //   });
 
-      if (!favoriteCategory) {
-        throw new HttpException(
-          'Favorite food category not found',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
+    //   if (!favoriteCategory) {
+    //     throw new HttpException(
+    //       'Favorite food category not found',
+    //       HttpStatus.BAD_REQUEST,
+    //     );
+    //   }
 
-      user.favoriteFood = favoriteCategory;
-    }
+    //   user.favoriteFood = favoriteCategory;
+    // }
 
     Object.assign(user, updateData);
 

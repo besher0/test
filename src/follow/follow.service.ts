@@ -37,7 +37,8 @@ export class FollowService {
     return { followed: true };
   }
 
-  async getFollowedRestaurants(userId: string, type?: BusinessType) {
+  async getFollowedRestaurants(userId: string, type?: BusinessType, page = 1) {
+    const take = 8;
     const where: { user: { id: string }; type?: BusinessType } = {
       user: { id: userId },
     };
@@ -45,11 +46,20 @@ export class FollowService {
     if (type) {
       where.type = type;
     }
-    const follows = await this.followRepo.find({
-      where: { user: { id: userId } },
+    const [follows, total] = await this.followRepo.findAndCount({
+      where,
       relations: ['restaurant'],
+      order: { createdAt: 'DESC' },
+      take,
+      skip: (page - 1) * take,
     });
 
-    return { follows: follows.map((f) => f.restaurant) };
+    return {
+      page,
+      perPage: take,
+      total,
+      totalPages: Math.ceil(total / take),
+      follows: follows.map((f) => f.restaurant),
+    };
   }
 }

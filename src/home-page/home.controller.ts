@@ -20,17 +20,17 @@ export class HomeController {
   async getHomeSections(
     @Req() req,
     @Query('businessType') businessType: BusinessType,
-    @Query('radiusKm') radiusKm?: string,
+    // @Query('radiusKm') radiusKm?: string,
   ) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const userId = req.user?.id ?? null; // يجي من JWT
-    let radiusNum: number | undefined = undefined;
-    if (radiusKm) {
-      radiusNum = Number(radiusKm);
-      if (Number.isNaN(radiusNum) || radiusNum <= 0) {
-        return { error: 'radiusKm must be a positive number' };
-      }
-    }
+    // let radiusNum: number | undefined = undefined;
+    // if (radiusKm) {
+    //   radiusNum = Number(radiusKm);
+    //   if (Number.isNaN(radiusNum) || radiusNum <= 0) {
+    //     return { error: 'radiusKm must be a positive number' };
+    //   }
+    // }
 
     // do not accept lat/lon from the client here; use stored user coordinates
     return await this.homeService.getHomeSections(
@@ -38,7 +38,7 @@ export class HomeController {
       userId,
       undefined,
       undefined,
-      radiusNum,
+      5,
     );
   }
 

@@ -154,6 +154,9 @@ export class FilterService {
         id: meal.id,
         name: meal.name,
         image: meal.image_url,
+        description: meal.description,
+        price: meal.price,
+        preparationTime: meal.preparationTime,
         restaurant: {
           id: meal.restaurant?.id,
           name: meal.restaurant?.name,

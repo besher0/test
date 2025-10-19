@@ -267,8 +267,14 @@ export class RestaurantController {
   @Get(':id/reviews')
   @ApiOperation({ summary: 'Get reviews for restaurant/store' })
   @ApiQuery({ name: 'type', enum: BusinessType, required: true })
-  getReviews(@Param('id') id: string, @Query('type') type: BusinessType) {
-    return this.restaurantService.getRestaurantReviews(id, type);
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  getReviews(
+    @Param('id') id: string,
+    @Query('type') type: BusinessType,
+    @Query('page') page?: string,
+  ) {
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    return this.restaurantService.getRestaurantReviews(id, type, pageNum);
   }
 
   @Get(':id/dishes')
@@ -279,20 +285,32 @@ export class RestaurantController {
     @Param('id') id: string,
     @Query('type') type: BusinessType,
     @Query('categoryId') categoryId?: string,
+    @Query('page') page?: string,
   ) {
     if (!type) {
       throw new BadRequestException(
         'type is required and must be restaurant or store',
       );
     }
-    return this.restaurantService.getRestaurantDishes(id, type, categoryId);
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    return this.restaurantService.getRestaurantDishes(
+      id,
+      type,
+      categoryId,
+      pageNum,
+    );
   }
 
   @Get(':id/images')
   @ApiOperation({ summary: 'Get restaurant/store images' })
   @ApiQuery({ name: 'type', enum: BusinessType, required: true })
-  getImages(@Param('id') id: string, @Query('type') type: BusinessType) {
-    return this.restaurantService.getImages(id, type);
+  getImages(
+    @Param('id') id: string,
+    @Query('type') type: BusinessType,
+    @Query('page') page?: string,
+  ) {
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    return this.restaurantService.getImages(id, type, pageNum);
   }
 
   @Post(':id/images')
@@ -301,6 +319,19 @@ export class RestaurantController {
   @ApiOperation({ summary: 'Upload a new image' })
   @ApiConsumes('multipart/form-data')
   @ApiQuery({ name: 'type', enum: BusinessType, required: true })
+  @ApiBody({
+    description: 'Upload image',
+    required: true,
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
   @UseInterceptors(FileInterceptor('file'))
   addImage(
     @Param('id') id: string,
@@ -327,8 +358,13 @@ export class RestaurantController {
   @Get(':id/videos')
   @ApiOperation({ summary: 'Get restaurant/store videos' })
   @ApiQuery({ name: 'type', enum: BusinessType, required: true })
-  getVideos(@Param('id') id: string, @Query('type') type: BusinessType) {
-    return this.restaurantService.getVideos(id, type);
+  getVideos(
+    @Param('id') id: string,
+    @Query('type') type: BusinessType,
+    @Query('page') page?: string,
+  ) {
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    return this.restaurantService.getVideos(id, type, pageNum);
   }
 
   @Post(':id/videos')
@@ -337,6 +373,19 @@ export class RestaurantController {
   @ApiOperation({ summary: 'Upload a new video' })
   @ApiConsumes('multipart/form-data')
   @ApiQuery({ name: 'type', enum: BusinessType, required: true })
+  @ApiBody({
+    description: 'Upload video',
+    required: true,
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
   @UseInterceptors(FileInterceptor('file'))
   addVideo(
     @Param('id') id: string,

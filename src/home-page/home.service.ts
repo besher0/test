@@ -12,6 +12,7 @@ import { PostReaction } from '../post/post-reaction.entity';
 import { Story } from '../story/story.entity';
 import { Follow } from '../follow/follow.entity';
 import { Order } from '../order/order.entity';
+// import { log } from 'node:console';
 
 @Injectable()
 export class HomeService {
@@ -310,7 +311,8 @@ export class HomeService {
       arabicKitchens: arabicKitchens.map((country) => ({
         id: country.id,
         name: country.name,
-        imageUrl: country.imageUrl,
+        image: country.imageUrl,
+        logoImage: country.logoImage,
         isLiked: userId
           ? country.likes.some((l) => l.user.id === userId)
           : false,

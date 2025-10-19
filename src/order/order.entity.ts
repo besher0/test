@@ -73,11 +73,11 @@ export class Order {
   // معلومات الدفع الإلكتروني
   @ApiProperty({
     example: 'UNPAID',
-    enum: ['UNPAID', 'PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+    enum: ['UNPAID', 'PENDING', 'AUTHORIZED', 'PAID', 'FAILED', 'REFUNDED'],
   })
   @Column({
     type: 'enum',
-    enum: ['UNPAID', 'PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+    enum: ['UNPAID', 'PENDING', 'AUTHORIZED', 'PAID', 'FAILED', 'REFUNDED'],
     default: 'UNPAID',
   })
   paymentStatus: string;
@@ -98,6 +98,14 @@ export class Order {
   @Column({ type: 'varchar', nullable: true })
   paypalCaptureId?: string | null;
 
+  @ApiProperty({
+    example: '3GG279541U4719AUTH',
+    required: false,
+    description: 'PayPal authorization id (for authorize-then-capture)',
+  })
+  @Column({ type: 'varchar', nullable: true })
+  paypalAuthorizationId?: string | null;
+
   @ApiProperty({ example: '2025-09-22T12:39:00.000Z' })
   @CreateDateColumn()
   createdAt: Date;
@@ -112,4 +120,8 @@ export class Order {
   @ApiPropertyOptional({ example: 'دمشق - باب توما' })
   @Column({ type: 'varchar', nullable: true })
   address?: string;
+
+  @ApiPropertyOptional({ example: '2025-10-20T18:30:00.000Z' })
+  @Column({ type: 'timestamp', nullable: true })
+  scheduledAt?: Date | null;
 }

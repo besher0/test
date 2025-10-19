@@ -66,8 +66,10 @@ export class LikeController {
   async getMyLikes(
     @CurrentUser() user: User,
     @Query('type') type: BusinessType,
+    @Query('page') page?: string,
   ) {
-    return this.likeService.getMealLikes(user, type);
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    return this.likeService.getMealLikes(user, type, pageNum);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -85,15 +87,22 @@ export class LikeController {
   async getRestaurantLikes(
     @CurrentUser() user: User,
     @Query('type') type: BusinessType,
+    @Query('page') page?: string,
   ) {
-    return this.likeService.getRestaurantLikes(user, type);
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    return this.likeService.getRestaurantLikes(user, type, pageNum);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('my-likes/countries')
   @ApiOperation({ summary: 'إرجاع قائمة إعجابات الدول الخاصة بالمستخدم' })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
   @ApiOkResponse({ type: CountryLikesResponseDto })
-  async getCountryLikes(@CurrentUser() user: User) {
-    return this.likeService.getCountryLikes(user);
+  async getCountryLikes(
+    @CurrentUser() user: User,
+    @Query('page') page?: string,
+  ) {
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    return this.likeService.getCountryLikes(user, pageNum);
   }
 }

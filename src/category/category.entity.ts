@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { User } from '../user/user.entity';
+// import { User } from '../user/user.entity';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { Meal } from 'src/meal/meal.entity';
 import { ApiProperty } from '@nestjs/swagger';
@@ -34,8 +34,8 @@ export class Category {
   })
   type: BusinessType;
 
-  @OneToMany(() => User, (user) => user.favoriteFood)
-  user: User;
+  // @OneToMany(() => User, (user) => user.favoriteFood)
+  // user: User;
 
   @OneToMany(() => Restaurant, (restaurant) => restaurant.category)
   restaurants: Restaurant[];

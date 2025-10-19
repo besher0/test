@@ -27,39 +27,39 @@ export class MealService {
     private cloudinaryService: CloudinaryService,
   ) {}
 
-  async getMealsByUserPreference(userId: string): Promise<Meal[]> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new Error('User not found');
-    }
+  // async getMealsByUserPreference(userId: string): Promise<Meal[]> {
+  //   const user = await this.userRepository.findOne({ where: { id: userId } });
+  //   if (!user) {
+  //     throw new Error('User not found');
+  //   }
 
-    if (!user.favoriteFood) {
-      return this.mealRepo.find({
-        relations: ['restaurant', 'category'],
-        order: { name: 'ASC' },
-      });
-    }
+  //   if (!user.favoriteFood) {
+  //     return this.mealRepo.find({
+  //       relations: ['restaurant', 'category'],
+  //       order: { name: 'ASC' },
+  //     });
+  //   }
 
-    const meals = await this.mealRepo
-      .createQueryBuilder('meal')
-      .leftJoinAndSelect('meal.restaurant', 'restaurant')
-      .leftJoinAndSelect('meal.category', 'category')
-      .addSelect(
-        `
-      CASE 
-        WHEN category.name = :favoriteFood THEN 0
-        ELSE 1
-      END
-    `,
-        'customOrder',
-      )
-      .orderBy('customOrder', 'ASC')
-      .addOrderBy('meal.name', 'ASC')
-      .setParameter('favoriteFood', user.favoriteFood)
-      .getMany();
+  //   const meals = await this.mealRepo
+  //     .createQueryBuilder('meal')
+  //     .leftJoinAndSelect('meal.restaurant', 'restaurant')
+  //     .leftJoinAndSelect('meal.category', 'category')
+  //     .addSelect(
+  //       `
+  //     CASE
+  //       WHEN category.name = :favoriteFood THEN 0
+  //       ELSE 1
+  //     END
+  //   `,
+  //       'customOrder',
+  //     )
+  //     .orderBy('customOrder', 'ASC')
+  //     .addOrderBy('meal.name', 'ASC')
+  //     .setParameter('favoriteFood', user.favoriteFood)
+  //     .getMany();
 
-    return meals;
-  }
+  //   return meals;
+  // }
 
   async create(
     dto: CreateMealDto,
@@ -67,11 +67,11 @@ export class MealService {
     file?: Express.Multer.File,
   ): Promise<Meal> {
     const restaurant = await this.restaurantRepo.findOne({
-      where: { id: dto.restaurantId, type },
+      where: { id: dto.restaurantId },
     });
     if (!restaurant) {
       throw new NotFoundException(
-        `Restaurant/Store with id ${dto.restaurantId} and type ${dto.type} not found`,
+        `Restaurant/Store with id ${dto.restaurantId}  not found`,
       );
     }
     let category: Category | undefined;

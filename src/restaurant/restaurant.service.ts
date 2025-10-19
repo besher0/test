@@ -374,30 +374,60 @@ export class RestaurantService {
     };
   }
 
-  async getRestaurantReviews(restaurantId: string, type: BusinessType) {
+  async getRestaurantReviews(
+    restaurantId: string,
+    type: BusinessType,
+    page = 1,
+  ) {
+    // helper to format how long ago in a friendly Arabic string
+    const timeAgo = (date: Date): string => {
+      const now = new Date();
+      const diffMs = now.getTime() - new Date(date).getTime();
+      const seconds = Math.floor(diffMs / 1000);
+      if (seconds < 60) return 'قبل ثوانٍ';
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `قبل ${minutes} دقيقة`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `قبل ${hours} ساعة`;
+      const days = Math.floor(hours / 24);
+      if (days < 30) return `قبل ${days} يوم`;
+      const months = Math.floor(days / 30);
+      if (months < 12) return `قبل ${months} شهر`;
+      const years = Math.floor(days / 365);
+      return `قبل ${years} سنة`;
+    };
     const restaurant = await this.restaurantRepo.findOne({
-      where: { id: restaurantId, type },
+      where: { id: restaurantId },
       select: ['id', 'name', 'averageRating'],
     });
 
     if (!restaurant) throw new NotFoundException(`${type} not found`);
 
-    if (!restaurant.isActive) throw new NotFoundException(`${type} not found`);
+    // if (!restaurant.isActive) throw new NotFoundException(`${type} not found`);
 
-    const ratings = await this.ratingRepo.find({
+    const take = 8;
+    const [ratings, total] = await this.ratingRepo.findAndCount({
       where: { restaurant: { id: restaurantId } },
       relations: ['user'],
       order: { createdAt: 'DESC' },
+      take,
+      skip: (page - 1) * take,
     });
 
     return {
       avgRating: restaurant.averageRating,
-      totalReviewers: ratings.length,
+      totalReviewers: total,
+      page,
+      perPage: take,
+      total,
+      totalPages: Math.ceil(total / take),
       reviews: ratings.map((rating) => ({
         id: rating.id,
         score: rating.score,
         comment: rating.comment,
+        image: rating.imageUrl,
         createdAt: rating.createdAt,
+        timeAgo: timeAgo(rating.createdAt),
         user: rating.user
           ? {
               id: rating.user.id,
@@ -413,6 +443,7 @@ export class RestaurantService {
     restaurantId: string,
     type: BusinessType,
     categoryId?: string,
+    page = 1,
   ) {
     // verify restaurant exists and is active
     const restaurant = await this.restaurantRepo.findOne({
@@ -422,19 +453,64 @@ export class RestaurantService {
     if (!restaurant) throw new NotFoundException(`${type} not found`);
     if (!restaurant.isActive) throw new NotFoundException(`${type} not found`);
 
-    const query = this.mealRepo
-      .createQueryBuilder('meal')
-      .leftJoinAndSelect('meal.restaurant', 'restaurant')
-      .leftJoinAndSelect('meal.category', 'category')
-      .where('meal.restaurantId = :restaurantId', { restaurantId })
-      .andWhere('restaurant.type = :type', { type });
+    const take = 8;
+    const [meals, total] = await this.mealRepo.findAndCount({
+      where: { restaurant: { id: restaurantId }, type },
+      relations: ['restaurant', 'category'],
+      order: { createdAt: 'DESC' },
+      take,
+      skip: (page - 1) * take,
+    });
+    const filtered = categoryId
+      ? meals.filter((m) => m.category?.id === categoryId)
+      : meals;
 
-    if (categoryId) {
-      query.andWhere('meal.categoryId = :categoryId', { categoryId });
-    }
-    const meals = await query.getMany();
-
-    return { meals };
+    return {
+      page,
+      perPage: take,
+      total,
+      totalPages: Math.ceil(total / take),
+      meals: filtered.map((meal) => ({
+        id: meal.id,
+        name: meal.name,
+        description: meal.description,
+        price: meal.price,
+        image: meal.image_url,
+        preparationTime: meal.preparationTime,
+        type: meal.type,
+        restaurant: meal.restaurant
+          ? {
+              id: meal.restaurant.id,
+              name: meal.restaurant.name,
+              location: meal.restaurant.location ?? null,
+              latitude: meal.restaurant.latitude ?? null,
+              longitude: meal.restaurant.longitude ?? null,
+              Identity: meal.restaurant.Identity ?? null,
+              logo_url: meal.restaurant.logo_url ?? null,
+              mainImage: meal.restaurant.mainImage ?? null,
+              description: meal.restaurant.description ?? null,
+              workingHours: meal.restaurant.workingHours ?? null,
+              type: meal.restaurant.type,
+              averageRating: meal.restaurant.averageRating ?? null,
+              createdAt: meal.restaurant.createdAt,
+              updatedAt: meal.restaurant.updatedAt,
+              isActive: meal.restaurant.isActive ?? null,
+              approvedAt: meal.restaurant.approvedAt ?? null,
+            }
+          : null,
+        category: meal.category
+          ? {
+              id: meal.category.id,
+              name: meal.category.name,
+              description: meal.category.description ?? undefined,
+              image: meal.category.image_url ?? undefined,
+              type: meal.category.type,
+            }
+          : null,
+        createdAt: meal.createdAt,
+        updatedAt: meal.updatedAt,
+      })),
+    };
   }
 
   // Admin approves a restaurant -> marks active and notifies owner
@@ -499,14 +575,25 @@ export class RestaurantService {
     return saved;
   }
 
-  async getImages(restaurantId: string, type: BusinessType) {
+  async getImages(restaurantId: string, type: BusinessType, page = 1) {
+    const take = 8;
     const restaurant = await this.restaurantRepo.findOne({
       where: { id: restaurantId, type },
       relations: ['images'],
     });
     if (!restaurant) throw new NotFoundException(`${type} not found`);
     if (!restaurant.isActive) throw new NotFoundException(`${type} not found`);
-    return { images: restaurant.images };
+
+    const images = restaurant.images || [];
+    const total = images.length;
+    const paged = images.slice((page - 1) * take, page * take);
+    return {
+      page,
+      perPage: take,
+      total,
+      totalPages: Math.ceil(total / take),
+      images: paged,
+    };
   }
 
   async addImage(
@@ -552,14 +639,25 @@ export class RestaurantService {
     return { success: true };
   }
 
-  async getVideos(restaurantId: string, type: BusinessType) {
+  async getVideos(restaurantId: string, type: BusinessType, page = 1) {
+    const take = 8;
     const restaurant = await this.restaurantRepo.findOne({
       where: { id: restaurantId, type },
       relations: ['videos'],
     });
     if (!restaurant) throw new NotFoundException(`${type} not found`);
     if (!restaurant.isActive) throw new NotFoundException(`${type} not found`);
-    return { videos: restaurant.videos };
+
+    const videos = restaurant.videos || [];
+    const total = videos.length;
+    const paged = videos.slice((page - 1) * take, page * take);
+    return {
+      page,
+      perPage: take,
+      total,
+      totalPages: Math.ceil(total / take),
+      videos: paged,
+    };
   }
 
   async addVideo(

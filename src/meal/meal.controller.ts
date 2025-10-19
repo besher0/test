@@ -7,7 +7,7 @@ import {
   Delete,
   Put,
   UseGuards,
-  Req,
+  // Req,
   UploadedFile,
   UseInterceptors,
   Query,
@@ -35,14 +35,14 @@ import { BusinessType } from 'src/common/business-type.enum';
 export class MealController {
   constructor(private readonly mealService: MealService) {}
 
-  @UseGuards(JwtAuthGuard)
-  @Get('user-preference')
-  @ApiOperation({ summary: "Get ('user-preference')".trim() })
-  @ApiResponse({ status: 200, description: 'Success' })
-  async getMealsByUserPreference(@Req() req): Promise<Meal[]> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    return this.mealService.getMealsByUserPreference(req.user);
-  }
+  // @UseGuards(JwtAuthGuard)
+  // @Get('user-preference')
+  // @ApiOperation({ summary: "Get ('user-preference')".trim() })
+  // @ApiResponse({ status: 200, description: 'Success' })
+  // async getMealsByUserPreference(@Req() req): Promise<Meal[]> {
+  //   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  //   return this.mealService.getMealsByUserPreference(req.user);
+  // }
 
   @UseGuards(JwtAuthGuard)
   @Post()

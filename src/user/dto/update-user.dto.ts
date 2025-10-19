@@ -9,7 +9,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsUrl,
-  ValidateIf,
+  // ValidateIf,
 } from 'class-validator';
 
 export class UpdateUserDto {
@@ -73,17 +73,17 @@ export class UpdateUserDto {
   @IsNotEmpty({ message: 'Confirm password is required' })
   confirmPassword?: string;
 
-  @ApiProperty({
-    description: 'Favorite food',
-    example: 'برغر', // أضفت مثال
-  })
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  @ValidateIf((o) => o.userType === 'normalUser')
-  @IsNotEmpty({ message: 'Favorite food is required' })
-  @IsEnum(['لحمة', 'رز', 'مشروبات', 'حلويات', 'برغر', 'معكرونة'], {
-    message: 'Favorite food must be one of the listed options',
-  })
-  favoriteFood?: string;
+  // @ApiProperty({
+  //   description: 'Favorite food',
+  //   example: 'برغر', // أضفت مثال
+  // })
+  // // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  // @ValidateIf((o) => o.userType === 'normalUser')
+  // @IsNotEmpty({ message: 'Favorite food is required' })
+  // @IsEnum(['لحمة', 'رز', 'مشروبات', 'حلويات', 'برغر', 'معكرونة'], {
+  //   message: 'Favorite food must be one of the listed options',
+  // })
+  // favoriteFood?: string;
 
   @ApiProperty({
     enum: ['normalUser', 'admin', 'restaurant', 'store'],

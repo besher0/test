@@ -5,13 +5,13 @@ import {
   OneToMany,
   OneToOne,
   JoinColumn,
-  ManyToOne,
+  // ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Category } from '../category/category.entity';
+// import { Category } from '../category/category.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { ValidateIf } from 'class-validator';
+// import { ValidateIf } from 'class-validator';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { Cart } from 'src/cart/cart.entity';
 import { Order } from 'src/order/order.entity';
@@ -39,14 +39,14 @@ export class User {
   @Column({ type: 'date' })
   birthDate: Date;
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  @ValidateIf((o) => o.userType === 'normalUser')
-  @ManyToOne(() => Category, (category) => category.user, {
-    nullable: true,
-    eager: true,
-  })
-  @JoinColumn({ name: 'favoriteFood' })
-  favoriteFood: Category;
+  /// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  // @ValidateIf((o) => o.userType === 'normalUser')
+  // @ManyToOne(() => Category, (category) => category.user, {
+  //   nullable: true,
+  //   eager: true,
+  // })
+  // @JoinColumn({ name: 'favoriteFood' })
+  // favoriteFood: Category;
 
   @ApiProperty({ example: 'normalUser' })
   @Column({

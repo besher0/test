@@ -22,8 +22,18 @@ type PaypalCaptureResponse = {
         id?: string;
         status?: string;
       }>;
+      authorizations?: Array<{
+        id?: string;
+        status?: string;
+      }>;
     };
   }>;
+};
+
+type PaypalRefundResponse = {
+  id?: string;
+  status?: string;
+  links?: Array<{ href?: string; rel?: string; method?: string }>;
 };
 
 @Injectable()
@@ -65,7 +75,11 @@ export class PayPalService {
     return data.access_token;
   }
 
-  async createOrder(total: string, currency = 'USD') {
+  async createOrder(
+    total: string,
+    currency = 'USD',
+    intent: 'CAPTURE' | 'AUTHORIZE' = 'CAPTURE',
+  ) {
     const accessToken = await this.getAccessToken();
 
     const response = await fetch(`${this.baseUrl}/v2/checkout/orders`, {
@@ -75,7 +89,7 @@ export class PayPalService {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        intent: 'CAPTURE',
+        intent,
         purchase_units: [
           {
             amount: {
@@ -84,6 +98,10 @@ export class PayPalService {
             },
           },
         ],
+        application_context: {
+          return_url: process.env.PAYPAL_RETURN_URL || undefined,
+          cancel_url: process.env.PAYPAL_CANCEL_URL || undefined,
+        },
       }),
     });
 
@@ -115,8 +133,93 @@ export class PayPalService {
     return (await response.json()) as PaypalCaptureResponse;
   }
 
+  async authorizeOrder(orderId: string) {
+    const accessToken = await this.getAccessToken();
+
+    const response = await fetch(
+      `${this.baseUrl}/v2/checkout/orders/${orderId}/authorize`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new InternalServerErrorException(
+        'Failed to authorize PayPal order',
+      );
+    }
+
+    return (await response.json()) as PaypalCaptureResponse;
+  }
+
+  async captureAuthorization(authorizationId: string) {
+    const accessToken = await this.getAccessToken();
+    const response = await fetch(
+      `${this.baseUrl}/v2/payments/authorizations/${authorizationId}/capture`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      },
+    );
+    if (!response.ok) {
+      throw new InternalServerErrorException('Failed to capture authorization');
+    }
+    return (await response.json()) as PaypalCaptureResponse;
+  }
+
+  async voidAuthorization(authorizationId: string) {
+    const accessToken = await this.getAccessToken();
+    const response = await fetch(
+      `${this.baseUrl}/v2/payments/authorizations/${authorizationId}/void`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      },
+    );
+    if (!response.ok) {
+      throw new InternalServerErrorException('Failed to void authorization');
+    }
+    await response.json();
+    return { success: true } as { success: boolean };
+  }
+
+  async refundCapture(captureId: string): Promise<PaypalRefundResponse> {
+    const accessToken = await this.getAccessToken();
+    const response = await fetch(
+      `${this.baseUrl}/v2/payments/captures/${captureId}/refund`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      },
+    );
+    if (!response.ok) {
+      throw new InternalServerErrorException('Failed to refund capture');
+    }
+    return (await response.json()) as PaypalRefundResponse;
+  }
+
   // إنشاء طلب PayPal مرتبط بطلب داخلي
-  async createPaypalForOrder(orderId: string, userId?: string) {
+  async createPaypalForOrder(
+    orderId: string,
+    userId?: string,
+    intent: 'CAPTURE' | 'AUTHORIZE' = 'CAPTURE',
+  ) {
     const order = await this.orderRepo.findOne({
       where: { id: orderId },
       relations: ['user'],
@@ -126,7 +229,7 @@ export class PayPalService {
       throw new NotFoundException('Order not found for this user');
     }
     const amount = Number(order.totalPrice).toFixed(2);
-    const created = await this.createOrder(amount, 'USD');
+    const created = await this.createOrder(amount, 'USD', intent);
     // حفظ ربط الطلب
     order.paymentStatus = 'PENDING';
     order.paypalOrderId = created.id;
@@ -155,12 +258,29 @@ export class PayPalService {
         'No PayPal order associated with this order',
       );
     }
-    const captured = await this.captureOrder(order.paypalOrderId);
-    // فحص النتيجة وتحديث الحالة
-    const pu = captured.purchase_units?.[0];
+    // لو كان الطلب مُنشأ بنية AUTHORIZE، نفذ authorization أولاً
+    const captureOrAuth = await this.captureOrder(order.paypalOrderId).catch(
+      async () => {
+        // جرّب authorize إذا فشلت capture (لحالة intent=AUTHORIZE)
+        return this.authorizeOrder(order.paypalOrderId!);
+      },
+    );
+
+    const pu = captureOrAuth.purchase_units?.[0];
     const cap = pu?.payments?.captures?.[0];
+    const auth = pu?.payments?.authorizations?.[0];
     const captureId: string | undefined = cap?.id;
-    const status: string | undefined = captured.status;
+    const authorizationId: string | undefined = auth?.id;
+    const status: string | undefined = captureOrAuth.status;
+
+    if (authorizationId) {
+      // صار Authorized لكن لم يُسحب المبلغ بعد
+      order.paymentStatus = 'AUTHORIZED';
+      order.paypalAuthorizationId = authorizationId;
+      await this.orderRepo.save(order);
+      return captureOrAuth;
+    }
+
     if (status === 'COMPLETED' || status === 'APPROVED') {
       order.paymentStatus = 'PAID';
       order.status = 'CONFIRMED';
@@ -169,6 +289,28 @@ export class PayPalService {
       order.paymentStatus = 'FAILED';
     }
     await this.orderRepo.save(order);
+    return captureOrAuth;
+  }
+
+  async captureAuthorizedIfAny(orderId: string) {
+    const order = await this.orderRepo.findOne({ where: { id: orderId } });
+    if (!order) throw new NotFoundException('Order not found');
+    if (!order.paypalAuthorizationId) {
+      throw new InternalServerErrorException('No PayPal authorization linked');
+    }
+    const captured = await this.captureAuthorization(
+      order.paypalAuthorizationId,
+    );
+    const pu = captured.purchase_units?.[0];
+    const cap = pu?.payments?.captures?.[0];
+    const captureId: string | undefined = cap?.id;
+    const status: string | undefined = captured.status;
+    if (status === 'COMPLETED' || status === 'APPROVED') {
+      order.paymentStatus = 'PAID';
+      order.status = 'CONFIRMED';
+      order.paypalCaptureId = captureId ?? null;
+      await this.orderRepo.save(order);
+    }
     return captured;
   }
 }

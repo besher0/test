@@ -67,12 +67,14 @@ async addItem(
       relations: ['items', 'items.meal', 'items.meal.restaurant'],
     });
 
+    let isNewCart = false;
     if (!cart) {
       const user = await this.userRepo.findOne({ where: { id: userId } });
       if (!user) {
         throw new NotFoundException('User not found');
       }
       cart = this.cartRepo.create({ userId, user, items: [] });
+      isNewCart = true;
     }
 
     if (cart.items.length > 0) {
@@ -84,17 +86,26 @@ async addItem(
       }
     }
 
-    let item = cart.items.find((i) => i.meal.id === meal.id);
-    if (item) {
-      item.quantity += quantity;
+    const existing = cart.items.find((i) => i.meal.id === meal.id);
+    if (existing) {
+      const newQty = existing.quantity + quantity;
+      if (newQty <= 0) {
+        throw new BadRequestException('Quantity must be greater than 0');
+      }
+      if (newQty !== existing.quantity) {
+        await this.cartItemRepo.update(existing.id, { quantity: newQty });
+        existing.quantity = newQty;
+      }
     } else {
-      item = this.cartItemRepo.create({ meal, quantity, cart });
-      cart.items.push(item);
+      // احفظ السلة أولاً إذا كانت جديدة (لضمان وجود cart.id)
+      if (isNewCart) {
+        cart = await this.cartRepo.save(cart);
+        isNewCart = false;
+      }
+      const newItem = this.cartItemRepo.create({ meal, quantity, cart });
+      await this.cartItemRepo.save(newItem);
+      cart.items.push(newItem);
     }
-
-    // حفظ التغييرات في السلة والعناصر
-    await this.cartRepo.save(cart);
-    await this.cartItemRepo.save(item);
     
     // إعادة تحميل السلة لحساب المجموع بشكل صحيح
     const updatedCart = await this.cartRepo.findOne({
@@ -107,7 +118,8 @@ async addItem(
       throw new NotFoundException('Cart not found after update');
     }
     updatedCart.total = await this.calculateCartTotal(updatedCart);
-    await this.cartRepo.save(updatedCart);
+    // حدّث حقل total فقط لتجنب أي تحديث فارغ
+    await this.cartRepo.update(updatedCart.id, { total: updatedCart.total });
     return updatedCart;
   }
 

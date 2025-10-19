@@ -30,8 +30,8 @@ export class RatingReply {
   })
   restaurant: Restaurant;
 
-  @Column({ type: 'enum', enum: BusinessType, enumName: 'reply_business_type' })
-  type: BusinessType;
+  // @Column({ type: 'enum', enum: BusinessType, enumName: 'reply_business_type' })
+  // type: BusinessType;
 
   @Column({ type: 'text' })
   replyText: string;

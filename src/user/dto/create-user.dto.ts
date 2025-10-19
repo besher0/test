@@ -9,8 +9,8 @@ import {
   IsNotEmpty,
   IsOptional,
   IsUrl,
-  ValidateIf,
-  IsUUID,
+  // ValidateIf,
+  // IsUUID,
 } from 'class-validator';
 
 export class CreateUserDto {
@@ -78,12 +78,10 @@ export class CreateUserDto {
     description: 'Favorite food',
     example: 'برغر', // أضفت مثال
   })
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  @ValidateIf((o) => o.userType === 'normalUser')
-  @IsUUID('all', { message: 'Favorite food must be a valid category ID' })
-  @IsOptional()
-  favoriteFood?: string;
-
+  // @ValidateIf((o) => o.userType === 'normalUser')
+  // @IsUUID('all', { message: 'Favorite food must be a valid category ID' })
+  // @IsOptional()
+  // favoriteFood?: string;
   @ApiProperty({
     enum: ['normalUser', 'admin', 'restaurant', 'store'],
     description: 'User type',

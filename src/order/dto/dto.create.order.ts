@@ -1,4 +1,11 @@
-import { IsUUID, IsInt, Min } from 'class-validator';
+import {
+  IsUUID,
+  IsInt,
+  Min,
+  IsOptional,
+  IsString,
+  IsDateString,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class OrderItemDto {
@@ -10,14 +17,16 @@ export class OrderItemDto {
   @IsInt()
   @Min(1)
   quantity: number;
+
+  @ApiPropertyOptional({
+    example: 'بدون زيتون',
+    description: 'ملاحظة لهذا العنصر فقط',
+  })
+  @IsOptional()
+  @IsString()
+  note?: string;
 }
-import {
-  IsArray,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  ValidateNested,
-} from 'class-validator';
+import { IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateOrderDto {
@@ -41,12 +50,12 @@ export class CreateOrderDto {
   @IsOptional()
   longitude?: number;
 
-  @ApiProperty({ type: [OrderItemDto] })
+  @ApiPropertyOptional({ type: [OrderItemDto] })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
-  @IsNotEmpty()
-  items: OrderItemDto[];
+  items?: OrderItemDto[];
 
   @IsOptional()
   @IsString()
@@ -55,4 +64,19 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   address?: string;
+
+  @ApiPropertyOptional({
+    example: '2025-10-20T18:30:00.000Z',
+    description: 'موعد التوصيل/الاستلام المجدول ISO8601',
+  })
+  @IsOptional()
+  @IsDateString()
+  scheduledAt?: string;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'تنظيف السلة بعد إنشاء الطلب؟',
+  })
+  @IsOptional()
+  clearCart?: boolean;
 }

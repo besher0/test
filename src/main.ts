@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 import * as dotenv from 'dotenv';
 import { setDefaultResultOrder } from 'node:dns';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   dotenv.config();
@@ -13,6 +14,14 @@ async function bootstrap() {
     // eslint-disable-next-line no-empty
   } catch {}
   const app = await NestFactory.create(AppModule, { cors: true });
+  // تفعيل التحقق من DTOs عالمياً ليعمل مع Swagger
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('Social Media API')

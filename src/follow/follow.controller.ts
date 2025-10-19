@@ -46,7 +46,9 @@ export class FollowController {
   async getMyFollowedRestaurants(
     @CurrentUser() user: User,
     @Query('type') type: BusinessType,
+    @Query('page') page?: string,
   ) {
-    return this.followService.getFollowedRestaurants(user.id, type);
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    return this.followService.getFollowedRestaurants(user.id, type, pageNum);
   }
 }
