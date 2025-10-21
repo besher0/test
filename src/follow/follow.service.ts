@@ -37,8 +37,13 @@ export class FollowService {
     return { followed: true };
   }
 
-  async getFollowedRestaurants(userId: string, type?: BusinessType, page = 1) {
-    const take = 8;
+  async getFollowedRestaurants(
+    userId: string,
+    type?: BusinessType,
+    page = 1,
+    limit = 8,
+  ) {
+    const take = limit;
     const where: { user: { id: string }; type?: BusinessType } = {
       user: { id: userId },
     };

@@ -66,8 +66,8 @@ async toggleLike(user: User, targetId: string, type?: BusinessType) {
   return { isLiked: true, message: `تم تسجيل الإعجاب بـ ${type} بنجاح` };
 }
 
-async getMealLikes(user: User, type: BusinessType, page = 1) {
-  const take = 8;
+async getMealLikes(user: User, type: BusinessType, page = 1, limit = 8) {
+  const take = limit;
   const [likes, total] = await this.likeRepo.findAndCount({
     where: {
       user: { id: user.id },
@@ -102,9 +102,9 @@ async getMealLikes(user: User, type: BusinessType, page = 1) {
   };
 }
 
-async getRestaurantLikes(user: User, type: BusinessType, page = 1) {
-  const take = 8;
-  const [likes, total] = await this.likeRepo.findAndCount({
+  async getRestaurantLikes(user: User, type: BusinessType, page = 1, limit = 8) {
+    const take = limit;
+    const [likes, total] = await this.likeRepo.findAndCount({
     where: {
       user: { id: user.id },
       restaurant: { id: Not(IsNull()) },
@@ -130,8 +130,8 @@ async getRestaurantLikes(user: User, type: BusinessType, page = 1) {
   };
 }
 
-async getCountryLikes(user: User, page = 1) {
-  const take = 8;
+  async getCountryLikes(user: User, page = 1, limit = 8) {
+  const take = limit;
   const [likes, total] = await this.likeRepo.findAndCount({
     where: {
       user: { id: user.id },

@@ -23,6 +23,7 @@ import { LikeModule } from './like/like.module';
 import { ReelModule } from './story/reel.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { PayPalModule } from './paypal/paypal.module';
+import { ConversationModule } from './conversation/conversation.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -30,7 +31,7 @@ import { PayPalModule } from './paypal/paypal.module';
       isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
-      useFactory: async () => ({
+      useFactory: () => ({
         ...dataSource.options,
         retryAttempts: 0, // لمنع retry الذي يسبب AggregateError
         retryDelay: 0,
@@ -52,6 +53,7 @@ import { PayPalModule } from './paypal/paypal.module';
     ReelModule,
     DashboardModule,
     PayPalModule,
+    ConversationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

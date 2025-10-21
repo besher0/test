@@ -67,9 +67,11 @@ export class LikeController {
     @CurrentUser() user: User,
     @Query('type') type: BusinessType,
     @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const pageNum = page ? Math.max(1, Number(page)) : 1;
-    return this.likeService.getMealLikes(user, type, pageNum);
+    const perPage = limit ? Math.max(1, Number(limit)) : 8;
+    return this.likeService.getMealLikes(user, type, pageNum, perPage);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -88,9 +90,11 @@ export class LikeController {
     @CurrentUser() user: User,
     @Query('type') type: BusinessType,
     @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const pageNum = page ? Math.max(1, Number(page)) : 1;
-    return this.likeService.getRestaurantLikes(user, type, pageNum);
+    const perPage = limit ? Math.max(1, Number(limit)) : 8;
+    return this.likeService.getRestaurantLikes(user, type, pageNum, perPage);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -101,8 +105,10 @@ export class LikeController {
   async getCountryLikes(
     @CurrentUser() user: User,
     @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const pageNum = page ? Math.max(1, Number(page)) : 1;
-    return this.likeService.getCountryLikes(user, pageNum);
+    const perPage = limit ? Math.max(1, Number(limit)) : 8;
+    return this.likeService.getCountryLikes(user, pageNum, perPage);
   }
 }

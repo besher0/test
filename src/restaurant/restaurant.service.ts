@@ -378,6 +378,7 @@ export class RestaurantService {
     restaurantId: string,
     type: BusinessType,
     page = 1,
+    limit = 8,
   ) {
     // helper to format how long ago in a friendly Arabic string
     const timeAgo = (date: Date): string => {
@@ -405,7 +406,7 @@ export class RestaurantService {
 
     // if (!restaurant.isActive) throw new NotFoundException(`${type} not found`);
 
-    const take = 8;
+    const take = limit;
     const [ratings, total] = await this.ratingRepo.findAndCount({
       where: { restaurant: { id: restaurantId } },
       relations: ['user'],
@@ -444,6 +445,7 @@ export class RestaurantService {
     type: BusinessType,
     categoryId?: string,
     page = 1,
+    limit = 8,
   ) {
     // verify restaurant exists and is active
     const restaurant = await this.restaurantRepo.findOne({
@@ -453,7 +455,7 @@ export class RestaurantService {
     if (!restaurant) throw new NotFoundException(`${type} not found`);
     if (!restaurant.isActive) throw new NotFoundException(`${type} not found`);
 
-    const take = 8;
+    const take = limit;
     const [meals, total] = await this.mealRepo.findAndCount({
       where: { restaurant: { id: restaurantId }, type },
       relations: ['restaurant', 'category'],
@@ -575,8 +577,13 @@ export class RestaurantService {
     return saved;
   }
 
-  async getImages(restaurantId: string, type: BusinessType, page = 1) {
-    const take = 8;
+  async getImages(
+    restaurantId: string,
+    type: BusinessType,
+    page = 1,
+    limit = 8,
+  ) {
+    const take = limit;
     const restaurant = await this.restaurantRepo.findOne({
       where: { id: restaurantId, type },
       relations: ['images'],
@@ -639,8 +646,13 @@ export class RestaurantService {
     return { success: true };
   }
 
-  async getVideos(restaurantId: string, type: BusinessType, page = 1) {
-    const take = 8;
+  async getVideos(
+    restaurantId: string,
+    type: BusinessType,
+    page = 1,
+    limit = 8,
+  ) {
+    const take = limit;
     const restaurant = await this.restaurantRepo.findOne({
       where: { id: restaurantId, type },
       relations: ['videos'],

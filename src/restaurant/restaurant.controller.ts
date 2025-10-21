@@ -40,6 +40,7 @@ import {
 import { RestaurantProfileDto } from './dto/RestaurantProfileDto';
 import { OptionalAuthGuard } from 'src/auth/guards/optional-auth.guard';
 import { FilterService } from './filter.service';
+import { isUUID } from 'class-validator';
 
 @ApiTags('Restaurants')
 @Controller('restaurants')
@@ -140,6 +141,7 @@ export class RestaurantController {
     @Query('category') category?: string,
     @Query('search') search?: string,
     @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     if (!type) {
       throw new BadRequestException(
@@ -148,13 +150,14 @@ export class RestaurantController {
     }
     const pageNum = page ? Math.max(1, Number(page)) : 1;
     // server enforces only active restaurants' meals
+    const perPage = limit ? Math.max(1, Number(limit)) : 8;
     return this.filterService.getMeals(
       type,
       user?.id,
       category,
       search,
       pageNum,
-      8,
+      perPage,
     );
   }
 
@@ -272,9 +275,16 @@ export class RestaurantController {
     @Param('id') id: string,
     @Query('type') type: BusinessType,
     @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const pageNum = page ? Math.max(1, Number(page)) : 1;
-    return this.restaurantService.getRestaurantReviews(id, type, pageNum);
+    const perPage = limit ? Math.max(1, Number(limit)) : 8;
+    return this.restaurantService.getRestaurantReviews(
+      id,
+      type,
+      pageNum,
+      perPage,
+    );
   }
 
   @Get(':id/dishes')
@@ -286,6 +296,7 @@ export class RestaurantController {
     @Query('type') type: BusinessType,
     @Query('categoryId') categoryId?: string,
     @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     if (!type) {
       throw new BadRequestException(
@@ -293,11 +304,13 @@ export class RestaurantController {
       );
     }
     const pageNum = page ? Math.max(1, Number(page)) : 1;
+    const perPage = limit ? Math.max(1, Number(limit)) : 8;
     return this.restaurantService.getRestaurantDishes(
       id,
       type,
       categoryId,
       pageNum,
+      perPage,
     );
   }
 
@@ -308,9 +321,11 @@ export class RestaurantController {
     @Param('id') id: string,
     @Query('type') type: BusinessType,
     @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const pageNum = page ? Math.max(1, Number(page)) : 1;
-    return this.restaurantService.getImages(id, type, pageNum);
+    const perPage = limit ? Math.max(1, Number(limit)) : 8;
+    return this.restaurantService.getImages(id, type, pageNum, perPage);
   }
 
   @Post(':id/images')
@@ -362,9 +377,11 @@ export class RestaurantController {
     @Param('id') id: string,
     @Query('type') type: BusinessType,
     @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const pageNum = page ? Math.max(1, Number(page)) : 1;
-    return this.restaurantService.getVideos(id, type, pageNum);
+    const perPage = limit ? Math.max(1, Number(limit)) : 8;
+    return this.restaurantService.getVideos(id, type, pageNum, perPage);
   }
 
   @Post(':id/videos')
@@ -424,16 +441,57 @@ export class RestaurantController {
     @Query('category') category?: string,
     @Query('search') search?: string,
     @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const pageNum = page ? Math.max(1, Number(page)) : 1;
+    const perPage = limit ? Math.max(1, Number(limit)) : 8;
     return this.filterService.getRestaurants(
       type,
       user?.id,
       category,
       search,
       pageNum,
-      8,
+      perPage,
     );
+  }
+
+  // Simple endpoint: provide only countryId (path param) and get restaurants for that country
+  @ApiBearerAuth()
+  @UseGuards(OptionalAuthGuard)
+  @Get('by-country/:countryId')
+  @ApiOperation({
+    summary:
+      'Get restaurants by country id (no type required), paginated 8 per page',
+  })
+  @ApiQuery({ name: 'category', required: false })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'page', required: false })
+  async getRestaurantsByCountryId(
+    @Param('countryId') countryId: string,
+    @CurrentUser() user: User,
+    @Query('category') category?: string,
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const cid = String(countryId ?? '').trim();
+    if (!cid || !isUUID(cid)) {
+      throw new BadRequestException(
+        'countryId path param is required and must be a valid UUID',
+      );
+    }
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    const limitNum = limit ? Math.max(1, Number(limit)) : 8;
+
+    const res = await this.filterService.getRestaurantsByCountryAllTypes(
+      cid,
+      user?.id,
+      category,
+      search,
+      pageNum,
+      limitNum,
+    );
+    return res;
   }
 }
 

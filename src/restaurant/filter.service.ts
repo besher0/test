@@ -275,4 +275,77 @@ export class FilterService {
       limit,
     };
   }
+
+  async getRestaurantsByCountryAllTypes(
+    countryId: string,
+    userId?: string,
+    category?: string,
+    search?: string,
+    page: number = 1,
+    limit: number = 8,
+  ) {
+    const query = this.restaurantRepo
+      .createQueryBuilder('restaurant')
+      .leftJoinAndSelect('restaurant.category', 'category')
+      .where('restaurant.countryId = :countryId', { countryId });
+
+    if (category) {
+      query.andWhere('category.name ILIKE :category', {
+        category: `%${category}%`,
+      });
+    }
+
+    if (search) {
+      query.andWhere('restaurant.name ILIKE :search', {
+        search: `%${search}%`,
+      });
+    }
+
+    if (userId) {
+      query.addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(1)')
+          .from('like', 'rl')
+          .where('rl.restaurantId = restaurant.id')
+          .andWhere('rl.userId = :userId', { userId });
+      }, 'isLiked');
+    }
+
+    query.andWhere('restaurant.isActive = true');
+
+    const skip = (page - 1) * limit;
+    query.skip(skip).take(limit);
+
+    const [entities, total] = await query.getManyAndCount();
+
+    if (userId) {
+      const raw = await query
+        .select(['restaurant.id'])
+        .addSelect((subQuery) => {
+          return subQuery
+            .select('COUNT(1)')
+            .from('like', 'rl')
+            .where('rl.restaurantId = restaurant.id')
+            .andWhere('rl.userId = :userId', { userId });
+        }, 'isLiked')
+        .getRawMany();
+
+      return {
+        items: entities.map((restaurant, idx) => ({
+          ...restaurant,
+          isLiked: this.parseIsLiked(raw[idx]),
+        })),
+        total,
+        page,
+        limit,
+      };
+    }
+
+    return {
+      items: entities.map((restaurant) => ({ ...restaurant, isLiked: false })),
+      total,
+      page,
+      limit,
+    };
+  }
 }

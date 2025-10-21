@@ -42,7 +42,7 @@ export class PayPalController {
     @Body('currency') currency?: string,
     @Body('intent') intent?: 'CAPTURE' | 'AUTHORIZE',
   ) {
-    const amount = total || '100.00'; // قيمة افتراضية لو ما أرسل العميل
+    const amount = total; // قيمة افتراضية لو ما أرسل العميل
     return this.paypalService.createOrder(
       amount,
       currency || 'USD',
