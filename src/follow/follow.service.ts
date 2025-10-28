@@ -64,6 +64,7 @@ export class FollowService {
       perPage: take,
       total,
       totalPages: Math.ceil(total / take),
+      isLastPage: total === 0 ? true : page >= Math.ceil(total / take),
       follows: follows.map((f) => f.restaurant),
     };
   }

@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsArray, IsString, IsOptional, IsObject } from 'class-validator';
 
 export class SendToManyDto {
   @ApiProperty({ description: 'Array of user IDs (UUIDs)', type: [String] })
@@ -13,4 +13,11 @@ export class SendToManyDto {
   @ApiProperty({ description: 'Notification body' })
   @IsString()
   body: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional structured data payload to persist/send',
+  })
+  @IsOptional()
+  @IsObject()
+  data?: Record<string, unknown>;
 }

@@ -8,6 +8,9 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { NotificationService } from '../notification/notification.service';
 import * as bcrypt from 'bcrypt';
@@ -20,6 +23,8 @@ export class AuthService {
     private userService: UserService,
     private jwtService: JwtService,
     private notificationService?: NotificationService,
+    @InjectRepository(Restaurant)
+    private restaurantRepo?: Repository<Restaurant>,
   ) {}
 
   // accept optional fcm token and device type to persist push tokens on login
@@ -34,7 +39,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
     const payload = { id: user.id, email: user.email, userType: user.userType };
-    const result = {
+    const result: any = {
       accessToken: this.jwtService.sign(payload),
       user,
     };
@@ -51,9 +56,35 @@ export class AuthService {
       }
     }
 
+    // If the user is a business owner, include their business id(s) in the login response
+    if (user.userType === 'restaurant' || user.userType === 'store') {
+      try {
+        if (this.restaurantRepo) {
+          const restaurants = await this.restaurantRepo.find({
+            where: { owner: { id: user.id } },
+          });
+          const ids = restaurants.map((r) => r.id);
+          if (ids.length > 0) {
+            // result.businessIds = ids;
+            result.businessId = ids[0]; // primary business id (first)
+          } else {
+            // result.businessIds = [];
+            result.businessId = null;
+          }
+        }
+      } catch {
+        // ignore business lookup errors
+      }
+    }
+
     // do not persist coordinates on login anymore (handled at registration/update)
 
-    return result;
+    return result as {
+      accessToken: string;
+      user: any;
+      // businessIds?: string[];
+      businessId?: string | null;
+    };
   }
 
   async register(

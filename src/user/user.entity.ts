@@ -36,8 +36,8 @@ export class User {
   lastName: string;
 
   @ApiProperty({ example: '2025-09-13T10:00:00.000Z' })
-  @Column({ type: 'date' })
-  birthDate: Date;
+  @Column({ type: 'varchar', nullable: true })
+  birthDate?: string | null;
 
   /// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   // @ValidateIf((o) => o.userType === 'normalUser')

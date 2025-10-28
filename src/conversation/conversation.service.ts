@@ -192,6 +192,7 @@ export class ConversationService {
       perPage: take,
       total,
       totalPages: Math.ceil(total / take),
+      isLastPage: total === 0 ? true : page >= Math.ceil(total / take),
       conversations: items,
     };
   }
@@ -212,6 +213,7 @@ export class ConversationService {
       perPage: take,
       total,
       totalPages: Math.ceil(total / take),
+      isLastPage: total === 0 ? true : page >= Math.ceil(total / take),
       messages: msgs,
     };
   }

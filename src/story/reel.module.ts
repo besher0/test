@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Story } from './story.entity';
+import { Follow } from 'src/follow/follow.entity';
 import { StoryService } from './story.service';
 import { StoryController } from './story.controller';
 import { User } from '../user/user.entity';
@@ -10,7 +11,7 @@ import { Reaction } from './reaction.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Story, User, Restaurant, Reaction]),
+    TypeOrmModule.forFeature([Story, User, Restaurant, Reaction, Follow]),
     CloudinaryModule,
   ],
   providers: [StoryService],

@@ -54,19 +54,56 @@ export class RestaurantController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new restaurant' })
   @ApiConsumes('multipart/form-data') // 👈 مهم جداً
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'logo', maxCount: 1 },
+      { name: 'mainImage', maxCount: 1 },
+      { name: 'identityImage1', maxCount: 1 },
+      { name: 'identityImage2', maxCount: 1 },
+    ]),
+  )
   @ApiBody({
-    type: CreateRestaurantDto,
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        location: { type: 'string' },
+        description: { type: 'string' },
+        workingHours: { type: 'string' },
+        countryId: { type: 'string' },
+        categoryId: { type: 'string' },
+        logo_url: { type: 'string', format: 'binary' },
+        mainImage: { type: 'string', format: 'binary' },
+        latitude: { type: 'number', format: 'float' },
+        longitude: { type: 'number', format: 'float' },
+        identityImage1: { type: 'string', format: 'binary' },
+        identityImage2: { type: 'string', format: 'binary' },
+      },
+    },
   })
   @ApiQuery({ name: 'type', enum: BusinessType, required: true })
   @ApiOkResponse({ type: Restaurant })
   create(
     @Body() dto: CreateRestaurantDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles()
+    files: {
+      logo?: Express.Multer.File[];
+      mainImage?: Express.Multer.File[];
+      identityImage1?: Express.Multer.File[];
+      identityImage2?: Express.Multer.File[];
+    },
     @CurrentUser() currentUser: User,
     @Query('type') type: BusinessType,
   ) {
-    return this.restaurantService.create(dto, currentUser, file, type);
+    return this.restaurantService.create(
+      dto,
+      currentUser,
+      files.logo?.[0],
+      files.mainImage?.[0],
+      type,
+      files.identityImage1?.[0],
+      files.identityImage2?.[0],
+    );
   }
 
   //   @Get()
@@ -182,6 +219,8 @@ export class RestaurantController {
     FileFieldsInterceptor([
       { name: 'mainImageFile', maxCount: 1 },
       { name: 'logoFile', maxCount: 1 },
+      { name: 'identityImage1', maxCount: 1 },
+      { name: 'identityImage2', maxCount: 1 },
     ]),
   )
   @ApiOperation({ summary: 'Update restaurant details (any field optional)' })
@@ -210,6 +249,8 @@ export class RestaurantController {
         },
         mainImageFile: { type: 'string', format: 'binary' },
         logoFile: { type: 'string', format: 'binary' },
+        identityImage1: { type: 'string', format: 'binary' },
+        identityImage2: { type: 'string', format: 'binary' },
       },
     },
   })
@@ -220,6 +261,8 @@ export class RestaurantController {
     files: {
       mainImageFile?: Express.Multer.File[];
       logoFile?: Express.Multer.File[];
+      identityImage1?: Express.Multer.File[];
+      identityImage2?: Express.Multer.File[];
     },
   ): Promise<Restaurant> {
     return this.restaurantService.updateRestaurant(
@@ -227,6 +270,8 @@ export class RestaurantController {
       dto,
       files.mainImageFile?.[0],
       files.logoFile?.[0],
+      files.identityImage1?.[0],
+      files.identityImage2?.[0],
     );
   }
 
@@ -465,12 +510,14 @@ export class RestaurantController {
   })
   @ApiQuery({ name: 'category', required: false })
   @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'type', enum: BusinessType, required: false })
   @ApiQuery({ name: 'page', required: false })
   async getRestaurantsByCountryId(
     @Param('countryId') countryId: string,
     @CurrentUser() user: User,
     @Query('category') category?: string,
     @Query('search') search?: string,
+    @Query('type') type?: BusinessType,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
@@ -490,6 +537,7 @@ export class RestaurantController {
       search,
       pageNum,
       limitNum,
+      type,
     );
     return res;
   }

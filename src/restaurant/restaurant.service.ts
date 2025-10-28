@@ -76,7 +76,10 @@ export class RestaurantService {
     dto: CreateRestaurantDto,
     currentUser: User,
     file?: Express.Multer.File,
+    mainImageFile?: Express.Multer.File,
     type?: BusinessType,
+    identityImage1File?: Express.Multer.File,
+    identityImage2File?: Express.Multer.File,
   ) {
     console.log(currentUser);
     if (!type || !['restaurant', 'store'].includes(type)) {
@@ -111,12 +114,53 @@ export class RestaurantService {
       );
       logo_url = result.secure_url;
     }
+
+    let mainImageUrl: string | undefined;
+    if (mainImageFile) {
+      const result = await this.cloudinaryService.uploadImage(
+        mainImageFile,
+        `restaurants/${dto.name}/main`,
+      );
+      mainImageUrl = result.secure_url;
+    }
+
     const restaurant = this.restaurantRepo.create({
       ...dto,
       owner,
       logo_url,
+      mainImage: mainImageUrl,
       type,
     });
+
+    // اذا المستخدم دخل كود احالة، اربط المطعم بالمرجع
+    if ((dto as any).referralCodeUsed) {
+      const code = (dto as any).referralCodeUsed;
+      const ref = await this.restaurantRepo.findOne({ where: { referralCode: code } });
+      if (ref) {
+        restaurant.referredBy = ref;
+      }
+    }
+
+    // انشئ كود احالة فريد للمطعم الجديد إذا لم يوفّر
+    if (!restaurant.referralCode) {
+      restaurant.referralCode = `REF-${Math.random().toString(36).slice(2, 8).toUpperCase()}${Date.now().toString().slice(-4)}`;
+    }
+
+    // upload identity images if provided
+    if (identityImage1File) {
+      const r = await this.cloudinaryService.uploadImage(
+        identityImage1File,
+        `restaurants/${dto.name}/identity`,
+      );
+      restaurant.identityImage1 = r.secure_url;
+    }
+    if (identityImage2File) {
+      const r = await this.cloudinaryService.uploadImage(
+        identityImage2File,
+        `restaurants/${dto.name}/identity`,
+      );
+      restaurant.identityImage2 = r.secure_url;
+    }
 
     const saved = await this.restaurantRepo.save(restaurant);
 
@@ -137,7 +181,8 @@ export class RestaurantService {
       id: r.id,
       name: r.name,
       location: r.location,
-      Identity: r.Identity,
+      identityImage1: r.identityImage1 ?? null,
+      identityImage2: r.identityImage2 ?? null,
       logo_url: r.logo_url,
       averageRating: r.averageRating,
       createdAt: r.createdAt,
@@ -169,7 +214,8 @@ export class RestaurantService {
       id: restaurant.id,
       name: restaurant.name,
       location: restaurant.location,
-      Identity: restaurant.Identity,
+      identityImage1: restaurant.identityImage1 ?? null,
+      identityImage2: restaurant.identityImage2 ?? null,
       logo_url: restaurant.logo_url,
       averageRating: restaurant.averageRating,
       createdAt: restaurant.createdAt,
@@ -192,6 +238,8 @@ export class RestaurantService {
     dto: UpdateRestaurantDto,
     mainImageFile?: Express.Multer.File,
     logoFile?: Express.Multer.File,
+    identityImage1File?: Express.Multer.File,
+    identityImage2File?: Express.Multer.File,
   ): Promise<Restaurant> {
     const restaurant = await this.restaurantRepo.findOne({
       where: { id },
@@ -241,6 +289,22 @@ export class RestaurantService {
       restaurant.logo_url = result.secure_url;
     }
 
+    // identity images
+    if (identityImage1File) {
+      const result = await this.cloudinaryService.uploadImage(
+        identityImage1File,
+        `restaurants/${restaurant.name}/identity`,
+      );
+      restaurant.identityImage1 = result.secure_url;
+    }
+    if (identityImage2File) {
+      const result = await this.cloudinaryService.uploadImage(
+        identityImage2File,
+        `restaurants/${restaurant.name}/identity`,
+      );
+      restaurant.identityImage2 = result.secure_url;
+    }
+
     return this.restaurantRepo.save(restaurant);
   }
 
@@ -278,7 +342,8 @@ export class RestaurantService {
         id: true,
         name: true,
         location: true,
-        Identity: true,
+        identityImage1: true,
+        identityImage2: true,
         logo_url: true,
         category: { id: true },
         averageRating: true,
@@ -415,13 +480,16 @@ export class RestaurantService {
       skip: (page - 1) * take,
     });
 
+    const totalPages = Math.ceil(total / take);
+    const isLastPage = total === 0 ? true : page >= totalPages;
     return {
       avgRating: restaurant.averageRating,
       totalReviewers: total,
       page,
       perPage: take,
       total,
-      totalPages: Math.ceil(total / take),
+      totalPages,
+      isLastPage,
       reviews: ratings.map((rating) => ({
         id: rating.id,
         score: rating.score,
@@ -467,11 +535,14 @@ export class RestaurantService {
       ? meals.filter((m) => m.category?.id === categoryId)
       : meals;
 
+    const totalPages = Math.ceil(total / take);
+    const isLastPage = total === 0 ? true : page >= totalPages;
     return {
       page,
       perPage: take,
       total,
-      totalPages: Math.ceil(total / take),
+      totalPages,
+      isLastPage,
       meals: filtered.map((meal) => ({
         id: meal.id,
         name: meal.name,
@@ -487,7 +558,8 @@ export class RestaurantService {
               location: meal.restaurant.location ?? null,
               latitude: meal.restaurant.latitude ?? null,
               longitude: meal.restaurant.longitude ?? null,
-              Identity: meal.restaurant.Identity ?? null,
+              identityImage1: meal.restaurant.identityImage1 ?? null,
+              identityImage2: meal.restaurant.identityImage2 ?? null,
               logo_url: meal.restaurant.logo_url ?? null,
               mainImage: meal.restaurant.mainImage ?? null,
               description: meal.restaurant.description ?? null,
@@ -537,6 +609,13 @@ export class RestaurantService {
           restaurant.owner.id,
           'تم قبول مطعمك',
           'تم قبول مطعمك في التطبيق وأصبح الآن ظاهر للمستخدمين',
+          {
+            type: 'restaurant_status',
+            restaurantId: restaurant.id,
+            status: 'APPROVED',
+            color: 'green',
+            timestamp: new Date().toISOString(),
+          },
         );
       }
     } catch (e) {
@@ -568,6 +647,13 @@ export class RestaurantService {
           restaurant.owner.id,
           'تم رفض مطعمك',
           reason || 'تم رفض تسجيل مطعمك، يمكنك تعديل البيانات وإعادة المحاولة',
+          {
+            type: 'restaurant_status',
+            restaurantId: restaurant.id,
+            status: 'REJECTED',
+            color: 'red',
+            timestamp: new Date().toISOString(),
+          },
         );
       }
     } catch (e) {
@@ -594,11 +680,14 @@ export class RestaurantService {
     const images = restaurant.images || [];
     const total = images.length;
     const paged = images.slice((page - 1) * take, page * take);
+    const totalPages = Math.ceil(total / take);
+    const isLastPage = total === 0 ? true : page >= totalPages;
     return {
       page,
       perPage: take,
       total,
-      totalPages: Math.ceil(total / take),
+      totalPages,
+      isLastPage,
       images: paged,
     };
   }
@@ -663,11 +752,14 @@ export class RestaurantService {
     const videos = restaurant.videos || [];
     const total = videos.length;
     const paged = videos.slice((page - 1) * take, page * take);
+    const totalPages = Math.ceil(total / take);
+    const isLastPage = total === 0 ? true : page >= totalPages;
     return {
       page,
       perPage: take,
       total,
-      totalPages: Math.ceil(total / take),
+      totalPages,
+      isLastPage,
       videos: paged,
     };
   }

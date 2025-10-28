@@ -1,11 +1,21 @@
 // src/notification/notification.controller.ts
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Query } from '@nestjs/common';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
+import { User } from 'src/user/user.entity';
 import { NotificationService } from './notification.service';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { RegisterTokenDto } from './dto/register-token.dto';
 import { SendToUserDto } from './dto/send-to-user.dto';
 import { SendToManyDto } from './dto/send-to-many.dto';
 import { SendToTopicDto } from './dto/send-to-topic.dto';
+// read/unread DTOs removed
 
 @ApiTags('notifications')
 @Controller('notifications')
@@ -32,7 +42,12 @@ export class NotificationController {
   })
   @ApiBody({ type: SendToUserDto })
   async sendToUser(@Body() dto: SendToUserDto) {
-    return this.notificationService.sendToUser(dto.userId, dto.title, dto.body);
+    return this.notificationService.sendToUser(
+      dto.userId,
+      dto.title,
+      dto.body,
+      dto.data,
+    );
   }
 
   // إرسال إشعار لمجموعة مستخدمين
@@ -44,6 +59,7 @@ export class NotificationController {
       dto.userIds,
       dto.title,
       dto.body,
+      dto.data,
     );
   }
 
@@ -54,4 +70,23 @@ export class NotificationController {
   async sendToTopic(@Body() dto: SendToTopicDto) {
     return this.notificationService.sendToTopic(dto.topic, dto.title, dto.body);
   }
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async getMyNotifications(
+    @CurrentUser() user: User,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    const perPage = limit ? Math.max(1, Number(limit)) : 20;
+    return this.notificationService.getUserNotifications(
+      user.id,
+      pageNum,
+      perPage,
+    );
+  }
+
+  // read/unread endpoints removed
 }
+// 3c42ee1a-ee0d-4b7b-8a02-4d3445951936

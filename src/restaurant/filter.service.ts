@@ -183,6 +183,7 @@ export class FilterService {
         }, 'isLiked')
         .getRawMany();
 
+      const totalPages = Math.ceil(total / limit);
       return {
         items: entities.map((meal, idx) =>
           formatMeal(meal, this.parseIsLiked(raw[idx])),
@@ -190,14 +191,19 @@ export class FilterService {
         total,
         page,
         limit,
+        totalPages,
+        isLastPage: total === 0 ? true : page >= totalPages,
       };
     }
 
+    const totalPages = Math.ceil(total / limit);
     return {
       items: entities.map((meal) => formatMeal(meal, false)),
       total,
       page,
       limit,
+      totalPages,
+      isLastPage: total === 0 ? true : page >= totalPages,
     };
   }
 
@@ -257,6 +263,7 @@ export class FilterService {
         }, 'isLiked')
         .getRawMany();
 
+      const totalPages = Math.ceil(total / limit);
       return {
         items: entities.map((restaurant, idx) => ({
           ...restaurant,
@@ -265,14 +272,19 @@ export class FilterService {
         total,
         page,
         limit,
+        totalPages,
+        isLastPage: total === 0 ? true : page >= totalPages,
       };
     }
 
+    const totalPages = Math.ceil(total / limit);
     return {
       items: entities.map((restaurant) => ({ ...restaurant, isLiked: false })),
       total,
       page,
       limit,
+      totalPages,
+      isLastPage: total === 0 ? true : page >= totalPages,
     };
   }
 
@@ -283,6 +295,7 @@ export class FilterService {
     search?: string,
     page: number = 1,
     limit: number = 8,
+    type?: 'restaurant' | 'store',
   ) {
     const query = this.restaurantRepo
       .createQueryBuilder('restaurant')
@@ -299,6 +312,10 @@ export class FilterService {
       query.andWhere('restaurant.name ILIKE :search', {
         search: `%${search}%`,
       });
+    }
+
+    if (type) {
+      query.andWhere('restaurant.type = :type', { type });
     }
 
     if (userId) {
@@ -330,6 +347,7 @@ export class FilterService {
         }, 'isLiked')
         .getRawMany();
 
+      const totalPages = Math.ceil(total / limit);
       return {
         items: entities.map((restaurant, idx) => ({
           ...restaurant,
@@ -338,14 +356,19 @@ export class FilterService {
         total,
         page,
         limit,
+        totalPages,
+        isLastPage: total === 0 ? true : page >= totalPages,
       };
     }
 
+    const totalPages = Math.ceil(total / limit);
     return {
       items: entities.map((restaurant) => ({ ...restaurant, isLiked: false })),
       total,
       page,
       limit,
+      totalPages,
+      isLastPage: total === 0 ? true : page >= totalPages,
     };
   }
 }

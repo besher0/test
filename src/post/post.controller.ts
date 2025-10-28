@@ -89,8 +89,28 @@ export class PostController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get posts by business type (restaurant/store)' })
   @Get('by-type/:type')
-  async getPosts(@Param('type') type: BusinessType, @CurrentUser() user: User) {
-    return this.postService.getPostsForUser(type, user.id);
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (default 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Number of posts per page (default 20)',
+  })
+  async getPosts(
+    @Param('type') type: BusinessType,
+    @CurrentUser() user: User,
+    @Query('page') page?: string,
+    @Query('limit') limitStr?: string,
+  ) {
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    const limit = limitStr ? Math.max(1, Math.min(100, Number(limitStr))) : 20;
+    return this.postService.getPostsForUser(type, user.id, {
+      page: pageNum,
+      limit,
+    });
   }
 
   @ApiBearerAuth()

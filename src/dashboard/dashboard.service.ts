@@ -138,6 +138,8 @@ export class DashboardService {
         total,
         page,
         limit,
+        totalPages: Math.ceil(total / limit),
+        isLastPage: total === 0 ? true : page >= Math.ceil(total / limit),
       };
     }
 
@@ -178,6 +180,7 @@ export class DashboardService {
     }>();
 
     const total = await this.restaurantRepo.count({ where: { type } });
+    const totalPages = Math.ceil(total / limit);
     return {
       items: rows.map((r) => ({
         id: r.id,
@@ -191,6 +194,8 @@ export class DashboardService {
       total,
       page,
       limit,
+      totalPages,
+      isLastPage: total === 0 ? true : page >= totalPages,
     };
   }
 
@@ -394,6 +399,138 @@ export class DashboardService {
       name: r.name,
       value: Number(r.value),
     }));
+  }
+
+  /**
+   * Admin dashboard summary used for the main dashboard screen.
+   * Returns:
+   * - newUsersThisMonth
+   * - newRestaurantsThisMonth
+   * - newStoresThisMonth
+   * - postsToday (separate counts for restaurants and stores)
+   * - topRestaurantByOrders (name, id, ordersCount)
+   * - cityOfTopRestaurant (country name or owner.city fallback)
+   * - topCategoryByOrders (category id, name, orderedQuantity)
+   */
+  async getAdminSummary() {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+    const startOfTomorrow = new Date(startOfToday);
+    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+
+    const [newUsersThisMonth, newRestaurantsThisMonth, newStoresThisMonth] =
+      await Promise.all([
+        this.userRepo.count({
+          where: {
+            userType: 'normalUser',
+            createdAt: MoreThanOrEqual(startOfMonth),
+          },
+        }),
+        this.restaurantRepo.count({
+          where: {
+            type: BusinessType.RESTAURANT,
+            createdAt: MoreThanOrEqual(startOfMonth),
+          },
+        }),
+        this.restaurantRepo.count({
+          where: {
+            type: BusinessType.STORE,
+            createdAt: MoreThanOrEqual(startOfMonth),
+          },
+        }),
+      ]);
+
+    // posts today per business type
+    const postsTodayRestaurants = await this.postRepo.count({
+      where: {
+        businessType: BusinessType.RESTAURANT,
+        createdAt: Between(startOfToday, startOfTomorrow),
+      },
+    });
+    const postsTodayStores = await this.postRepo.count({
+      where: {
+        businessType: BusinessType.STORE,
+        createdAt: Between(startOfToday, startOfTomorrow),
+      },
+    });
+
+    // top restaurant by orders (overall)
+    const topRestaurantRow = await this.orderRepo
+      .createQueryBuilder('o')
+      .innerJoin('o.restaurant', 'r')
+      .leftJoin('r.owner', 'owner')
+      .leftJoin('r.country', 'country')
+      .select('r.id', 'id')
+      .addSelect('r.name', 'name')
+      .addSelect('COUNT(o.id)', 'orders_count')
+      .addSelect("COALESCE(country.name, '')", 'countryName')
+      .addSelect("COALESCE(owner.city, '')", 'ownerCity')
+      .groupBy('r.id')
+      .addGroupBy('r.name')
+      .addGroupBy('country.name')
+      .addGroupBy('owner.city')
+      .orderBy('orders_count', 'DESC')
+      .limit(1)
+      .getRawOne<{
+        id: string;
+        name: string;
+        orders_count: string;
+        countryName: string;
+        ownerCity: string;
+      }>();
+
+    const topRestaurant = topRestaurantRow
+      ? {
+          id: topRestaurantRow.id,
+          name: topRestaurantRow.name,
+          ordersCount: Number(topRestaurantRow.orders_count || 0),
+        }
+      : null;
+
+    const cityOfTopRestaurant = topRestaurantRow
+      ? topRestaurantRow.countryName || topRestaurantRow.ownerCity || null
+      : null;
+
+    // top category by ordered quantity (sum of order item quantities)
+    const topCategoryRow = await this.orderRepo
+      .createQueryBuilder('o')
+      .innerJoin('o.items', 'it')
+      .innerJoin('it.meal', 'm')
+      .innerJoin('m.category', 'c')
+      .select('c.id', 'id')
+      .addSelect('c.name', 'name')
+      .addSelect('COALESCE(SUM(it.quantity),0)', 'ordered_qty')
+      .groupBy('c.id')
+      .addGroupBy('c.name')
+      .orderBy('ordered_qty', 'DESC')
+      .limit(1)
+      .getRawOne<{ id: string; name: string; ordered_qty: string }>();
+
+    const topCategoryByOrders = topCategoryRow
+      ? {
+          id: topCategoryRow.id,
+          name: topCategoryRow.name,
+          orderedQuantity: Number(topCategoryRow.ordered_qty || 0),
+        }
+      : null;
+
+    return {
+      newUsersThisMonth,
+      newRestaurantsThisMonth,
+      newStoresThisMonth,
+      postsToday: {
+        restaurants: postsTodayRestaurants,
+        stores: postsTodayStores,
+      },
+      topRestaurant,
+      cityOfTopRestaurant,
+      topCategoryByOrders,
+    };
   }
 
   async getTopCategories({

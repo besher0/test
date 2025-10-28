@@ -65,12 +65,21 @@ export class Restaurant {
   @Column('decimal', { precision: 10, scale: 6, nullable: true })
   longitude?: number;
 
+  // Identity images (front/back or two documents) stored as URLs in Cloudinary
   @ApiProperty({
-    example: 'RESTAURANT-12345',
+    example: null,
     required: false,
+    description: 'URL of identity image 1 (front)',
   })
-  @Column({ nullable: true })
-  Identity: string;
+  @Column({ type: 'varchar', nullable: true })
+  identityImage1?: string | null;
+  @ApiProperty({
+    example: null,
+    required: false,
+    description: 'URL of identity image 2 (back)',
+  })
+  @Column({ type: 'varchar', nullable: true })
+  identityImage2?: string | null;
 
   @ApiProperty({
     example: 'https://example.com/logo.png',
@@ -78,6 +87,32 @@ export class Restaurant {
   })
   @Column({ nullable: true })
   logo_url: string;
+
+  @ApiProperty({
+    example: 'merchant@example.com',
+    required: false,
+    description: 'PayPal email of the restaurant owner to receive payouts',
+  })
+  @Column({ type: 'varchar', nullable: true })
+  paypalEmail?: string | null;
+
+  @ApiProperty({
+    example: 'REF-ABCD1234',
+    required: false,
+    description: 'Unique referral code for this restaurant/store',
+  })
+  @Column({ type: 'varchar', nullable: true, unique: true })
+  referralCode?: string | null;
+
+  @ApiProperty({
+    example: null,
+    required: false,
+    description:
+      'If this restaurant was created using another restaurant/store code, this links to that referrer',
+  })
+  @ManyToOne(() => Restaurant, { nullable: true })
+  @JoinColumn({ name: 'referredById' })
+  referredBy?: Restaurant | null;
 
   @OneToMany(() => DeliveryLocation, (location) => location.restaurant, {
     cascade: true,

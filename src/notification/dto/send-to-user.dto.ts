@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsOptional, IsObject } from 'class-validator';
 
 export class SendToUserDto {
   @ApiProperty({ description: 'User ID (UUID)' })
@@ -13,4 +13,12 @@ export class SendToUserDto {
   @ApiProperty({ description: 'Notification body' })
   @IsString()
   body: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Optional structured data payload (will be persisted and sent as data.payload)',
+  })
+  @IsOptional()
+  @IsObject()
+  data?: Record<string, unknown>;
 }

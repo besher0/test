@@ -4,7 +4,7 @@ import {
   MinLength,
   IsEnum,
   IsEmail,
-  IsDate,
+  IsISO8601,
   Matches,
   IsNotEmpty,
   IsOptional,
@@ -34,8 +34,8 @@ export class CreateUserDto {
     description: 'Birth date',
     example: '1990-05-15', // أضفت مثال (تاريخ ISO)
   })
-  @IsDate({ message: 'Birth date must be a valid date' })
-  birthDate: Date;
+  @IsISO8601({}, { message: 'Birth date must be a valid ISO 8601 date string' })
+  birthDate: string;
 
   @ApiProperty({
     enum: ['male', 'female'],

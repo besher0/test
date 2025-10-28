@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository, MoreThan, In } from 'typeorm';
 import { Story } from './story.entity';
 import { Reaction } from './reaction.entity';
 import { User } from 'src/user/user.entity';
@@ -14,6 +14,7 @@ import { UpdateStoryDto } from './dto/update-story.dto';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { BusinessType } from 'src/common/business-type.enum';
+import { Follow } from 'src/follow/follow.entity';
 
 @Injectable()
 export class StoryService {
@@ -24,6 +25,8 @@ export class StoryService {
 
     @InjectRepository(Restaurant)
     private readonly restaurantRepo: Repository<Restaurant>,
+    @InjectRepository(Follow)
+    private readonly followRepo: Repository<Follow>,
   ) {}
 
   async createStory(
@@ -168,33 +171,102 @@ export class StoryService {
     return this.reactionRepo.save(reaction);
   }
 
-  async getStoriesForUser(userId: string, type?: BusinessType) {
+  async getStoriesForUser(
+    userId: string,
+    type?: BusinessType,
+    opts?: { limit?: number; page?: number; ownerCap?: number },
+  ) {
     const now = new Date();
+    const limit =
+      opts?.limit && Number(opts.limit) > 0 ? Number(opts.limit) : 20;
+    const ownerCap =
+      opts?.ownerCap && Number(opts.ownerCap) > 0 ? Number(opts.ownerCap) : 10;
+    const page = opts?.page && Number(opts.page) > 0 ? Number(opts.page) : 1;
+    const skip = (page - 1) * limit;
 
-    const stories = await this.storyRepo.find({
-      where: { expiresAt: MoreThan(now) },
-      relations: [
-        'restaurant',
-        'restaurant.owner',
-        'reactions',
-        'reactions.user',
-      ],
-      order: { createdAt: 'DESC' },
+    // 1) find restaurants owned by user (matching type if provided)
+    const ownerWhere: any = { owner: { id: userId } };
+    if (type) ownerWhere.type = type;
+    const owned = await this.restaurantRepo.find({
+      where: ownerWhere,
+      select: ['id'],
     });
+    const ownerRestaurantIds = owned.map((r) => r.id);
+    console.log('[DEBUG stories] ownerRestaurantIds=', ownerRestaurantIds);
 
-    const filtered = type
-      ? stories.filter((s) => s.businessType === type)
-      : stories;
+    // 2) fetch owner stories (cap)
+    let ownerStories: Story[] = [];
+    if (ownerRestaurantIds.length > 0) {
+      ownerStories = await this.storyRepo.find({
+        where: {
+          restaurant: { id: In(ownerRestaurantIds), isActive: true },
+          expiresAt: MoreThan(now),
+          ...(type ? { businessType: type } : {}),
+        },
+        relations: [
+          'restaurant',
+          'restaurant.owner',
+          'reactions',
+          'reactions.user',
+        ],
+        order: { createdAt: 'DESC' },
+        take: ownerCap,
+      });
+      console.log('[DEBUG stories] ownerStories count=', ownerStories.length);
+    }
 
-    return filtered.map((story) => {
+    // 3) find followed restaurants (exclude owner's restaurants to avoid duplication)
+    const follows = await this.followRepo.find({
+      where: { user: { id: userId }, ...(type ? { type } : {}) },
+      relations: ['restaurant'],
+    });
+    const followedRestaurantIds = follows
+      .map((f) => f.restaurant?.id)
+      .filter((id): id is string => !!id && !ownerRestaurantIds.includes(id));
+    console.log('[DEBUG stories] followedRestaurantIds=', followedRestaurantIds);
+
+    // 4) fetch followed stories with page/limit (offset) pagination
+    let storiesItems: Story[] = [];
+    let total = 0;
+    if (followedRestaurantIds.length > 0) {
+      const qb = this.storyRepo
+        .createQueryBuilder('s')
+        .leftJoinAndSelect('s.restaurant', 'r')
+        .leftJoinAndSelect('r.owner', 'owner')
+        .leftJoinAndSelect('s.reactions', 'reaction')
+        .leftJoinAndSelect('reaction.user', 'reactionUser')
+        .where('s.expiresAt > :now', { now })
+        .andWhere('r.id IN (:...rids)', { rids: followedRestaurantIds });
+
+      if (type) qb.andWhere('s.businessType = :type', { type });
+
+      // total count
+      const countQb = this.storyRepo
+        .createQueryBuilder('s')
+        .leftJoin('s.restaurant', 'r')
+        .where('s.expiresAt > :now', { now })
+        .andWhere('r.id IN (:...rids)', { rids: followedRestaurantIds });
+      if (type) countQb.andWhere('s.businessType = :type', { type });
+
+    total = await countQb.getCount();
+    console.log('[DEBUG stories] followed stories total=', total);
+
+      qb.orderBy('s.createdAt', 'DESC')
+        .addOrderBy('s.id', 'DESC')
+        .skip(skip)
+        .take(limit);
+    storiesItems = await qb.getMany();
+    console.log('[DEBUG stories] fetched storiesItems count=', storiesItems.length);
+    }
+
+    // map ownerStories and storiesItems to DTOs
+    const mapStory = (story: Story) => {
       const reactionsCount = {
-        like: story.reactions.filter((r) => r.type === 'like').length,
-        love: story.reactions.filter((r) => r.type === 'love').length,
-        fire: story.reactions.filter((r) => r.type === 'fire').length,
+        like: story.reactions?.filter((r) => r.type === 'like').length ?? 0,
+        love: story.reactions?.filter((r) => r.type === 'love').length ?? 0,
+        fire: story.reactions?.filter((r) => r.type === 'fire').length ?? 0,
       };
-
-      const userReaction = story.reactions.find((r) => r.user.id === userId);
-
+      const userReaction = story.reactions?.find((r) => r.user.id === userId);
       return {
         id: story.id,
         mediaUrl: story.mediaUrl,
@@ -215,6 +287,11 @@ export class StoryService {
         reactions: reactionsCount,
         hasReacted: userReaction ? userReaction.type : null,
       };
-    });
+    };
+
+    return {
+      ownerStories: ownerStories.map(mapStory),
+      stories: { items: storiesItems.map(mapStory), page, limit, total },
+    };
   }
 }

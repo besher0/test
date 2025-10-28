@@ -7,7 +7,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Post } from './post.entity';
 import { PostReaction } from './post-reaction.entity';
-import { Story } from 'src/story/story.entity';
 import { User } from 'src/user/user.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -25,8 +24,7 @@ export class PostService {
     private readonly reactionRepo: Repository<PostReaction>,
     @InjectRepository(Restaurant)
     private readonly restaurantRepo: Repository<Restaurant>,
-    @InjectRepository(Story)
-    private readonly storyRepo: Repository<Story>,
+    
     private readonly cloudinaryService: CloudinaryService,
   ) {}
 
@@ -151,50 +149,47 @@ export class PostService {
     return this.reactionRepo.save(reaction);
   }
 
-  // Get posts visible to user (here: all posts of a business type)
-  async getPostsForUser(type: BusinessType, userId: string) {
-    const posts = await this.postRepo.find({
-      relations: [
-        'restaurant',
-        'restaurant.owner',
-        'reactions',
-        'reactions.user',
-      ],
-      where: { businessType: type },
-      order: { createdAt: 'DESC' },
-    });
+  // Get posts visible to user (page/limit pagination). Exclude posts belonging to restaurants owned by the requesting user.
+  async getPostsForUser(
+    type: BusinessType,
+    userId: string,
+    opts?: { limit?: number; page?: number },
+  ) {
+    const limit = opts?.limit && Number(opts.limit) > 0 ? Number(opts.limit) : 20;
+    const page = opts?.page && Number(opts.page) > 0 ? Number(opts.page) : 1;
+    const skip = (page - 1) * limit;
 
-    // build story lookup for posts with mediaUrl
-    const storyLookup: Record<string, Story> = {};
-    try {
-      const mediaUrls = posts
-        .map((p) => p.mediaUrl)
-        .filter((u): u is string => !!u);
-
-      const restaurantIds = posts
-        .map((p) => p.restaurant?.id)
-        .filter((id): id is string => !!id);
-
-      if (this.storyRepo && mediaUrls.length > 0 && restaurantIds.length > 0) {
-        const foundStories = await this.storyRepo
-          .createQueryBuilder('s')
-          .leftJoinAndSelect('s.restaurant', 'r')
-          .where('s.mediaUrl IN (:...urls)', { urls: mediaUrls })
-          .andWhere('r.id IN (:...rids)', { rids: restaurantIds })
-          .getMany();
-
-        for (const s of foundStories) {
-          if (s.mediaUrl && s.restaurant?.id) {
-            storyLookup[`${s.mediaUrl}|${s.restaurant.id}`] = s;
-          }
-        }
-      }
-    } catch (e) {
-      // keep a small log so the linter doesn't complain about unused vars
-      console.warn('story lookup failed in getPostsForUser:', e);
+    // find restaurants owned by the requesting user (to exclude their posts)
+    let ownerRestaurantIds: string[] = [];
+    if (userId) {
+      const owned = await this.restaurantRepo.find({
+        where: { owner: { id: userId }, type },
+        select: ['id'],
+      });
+      ownerRestaurantIds = owned.map((r) => r.id);
     }
 
-    return posts.map((post) => {
+    const qb = this.postRepo
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.restaurant', 'restaurant')
+      .leftJoinAndSelect('restaurant.owner', 'owner')
+      .leftJoinAndSelect('post.reactions', 'reactions')
+      .leftJoinAndSelect('reactions.user', 'reactionUser')
+      .where('post.businessType = :type', { type });
+
+    if (ownerRestaurantIds.length > 0) {
+      qb.andWhere('restaurant.id NOT IN (:...ownerRestaurantIds)', {
+        ownerRestaurantIds,
+      });
+    }
+
+    qb.orderBy('post.createdAt', 'DESC').addOrderBy('post.id', 'DESC').skip(skip).take(limit);
+
+    const [posts, total] = await qb.getManyAndCount();
+
+    // (matchingStoryId feature removed) no story lookup performed
+
+    const mapped = posts.map((post) => {
       const reactionsCount = {
         like: post.reactions?.filter((r) => r.type === 'like').length ?? 0,
         love: post.reactions?.filter((r) => r.type === 'love').length ?? 0,
@@ -203,15 +198,7 @@ export class PostService {
 
       const userReaction = post.reactions?.find((r) => r.user.id === userId);
 
-      let matchingKey: string | null = null;
-      if (post.mediaUrl && post.restaurant?.id) {
-        matchingKey = `${post.mediaUrl}|${post.restaurant.id}`;
-      }
-
-      let matchingStoryId: string | null = null;
-      if (matchingKey && storyLookup[matchingKey]) {
-        matchingStoryId = storyLookup[matchingKey].id;
-      }
+      // matchingStoryId removed - do not compute matching story
 
       const rest = post.restaurant;
       const restaurantFull = rest
@@ -221,7 +208,8 @@ export class PostService {
             location: rest.location,
             latitude: rest.latitude,
             longitude: rest.longitude,
-            Identity: rest.Identity,
+            identityImage1: rest.identityImage1 ?? null,
+            identityImage2: rest.identityImage2 ?? null,
             logo_url: rest.logo_url,
             mainImage: rest.mainImage,
             description: rest.description,
@@ -248,10 +236,11 @@ export class PostService {
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
         restaurant: restaurantFull,
-        matchingStoryId,
         reactions: reactionsCount,
         hasReacted: userReaction ? userReaction.type : null,
       };
     });
+
+    return { items: mapped, page, limit, total };
   }
 }

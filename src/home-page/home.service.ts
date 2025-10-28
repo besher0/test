@@ -247,9 +247,29 @@ export class HomeService {
         })
         .getMany();
 
+      // Additionally: fetch restaurants that have their own latitude/longitude inside the bbox
+      // so restaurants without deliveryLocations but with a point are also considered.
+      const restPointRows = await this.restRepo
+        .createQueryBuilder('restaurant')
+        .leftJoinAndSelect('restaurant.likes', 'like')
+        .leftJoinAndSelect('like.user', 'likeUser')
+        .where('restaurant.type = :businessType', { businessType })
+        .andWhere('restaurant.isActive = true')
+        .andWhere('restaurant.latitude BETWEEN :latMin AND :latMax', {
+          latMin,
+          latMax,
+        })
+        .andWhere('restaurant.longitude BETWEEN :lonMin AND :lonMax', {
+          lonMin,
+          lonMax,
+        })
+        .getMany();
+
       // restaurants may be returned with only the deliveryLocations that match due to leftJoinAndSelect
       const candidates: Array<{ restaurant: Restaurant; distanceKm: number }> =
         [];
+
+      // process restaurants found via deliveryLocations
       for (const r of dlRows) {
         if (!r.deliveryLocations || r.deliveryLocations.length === 0) continue;
         // compute min distance across delivery locations
@@ -265,6 +285,20 @@ export class HomeService {
         }
         if (minDist <= radius) {
           candidates.push({ restaurant: r, distanceKm: minDist });
+        }
+      }
+
+      // process restaurants that have their own lat/lng (point) inside bbox
+      for (const r of restPointRows) {
+        if (r.latitude === undefined || r.longitude === undefined) continue;
+        const d = this.haversineKm(
+          lat,
+          lon,
+          Number(r.latitude),
+          Number(r.longitude),
+        );
+        if (d <= radius) {
+          candidates.push({ restaurant: r, distanceKm: d });
         }
       }
 
@@ -346,16 +380,33 @@ export class HomeService {
   }
 
   async getFeed(businessType: BusinessType, userId?: string) {
+    // Determine restaurants owned by the requesting user (if any)
+    let ownerRestaurantIds: string[] = [];
+    if (userId) {
+      const owned = await this.restRepo.find({
+        where: { owner: { id: userId }, type: businessType, isActive: true },
+        select: ['id'],
+      });
+      ownerRestaurantIds = owned.map((r) => r.id);
+    }
+
     // Posts by business type with reactions summary and user reaction
-    const posts = await this.postRepo
+    // Exclude posts that belong to restaurants owned by the requesting user
+    const postsQb = this.postRepo
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.restaurant', 'restaurant')
       .leftJoinAndSelect('post.reactions', 'reaction')
       .leftJoinAndSelect('reaction.user', 'reactionUser')
       .where('post.businessType = :businessType', { businessType })
-      .andWhere('restaurant.isActive = true')
-      .orderBy('post.createdAt', 'DESC')
-      .getMany();
+      .andWhere('restaurant.isActive = true');
+
+    if (ownerRestaurantIds.length > 0) {
+      postsQb.andWhere('restaurant.id NOT IN (:...ownerRestaurantIds)', {
+        ownerRestaurantIds,
+      });
+    }
+
+    const posts = await postsQb.orderBy('post.createdAt', 'DESC').getMany();
 
     const postItems = posts.map((post) => {
       const like = post.reactions?.filter((r) => r.type === 'like').length ?? 0;
@@ -380,6 +431,7 @@ export class HomeService {
     });
 
     // Stories from followed restaurants/stores by business type (not expired)
+    // If the requester owns restaurants, include their stories first, then the followed stories.
     let storyItems: Array<{
       id: string;
       text?: string;
@@ -392,17 +444,33 @@ export class HomeService {
     }> = [];
 
     if (userId) {
+      const now = new Date();
+
+      // 1) Owner stories (if any)
+      let ownerStories: Story[] = [];
+      if (ownerRestaurantIds.length > 0) {
+        ownerStories = await this.storyRepo.find({
+          where: {
+            restaurant: { id: In(ownerRestaurantIds), isActive: true },
+            expiresAt: MoreThan(now),
+            businessType,
+          },
+          relations: ['restaurant', 'reactions', 'reactions.user'],
+          order: { createdAt: 'DESC' },
+        });
+      }
+
+      // 2) Followed restaurants' stories
       const follows = await this.followRepo.find({
         where: { user: { id: userId }, type: businessType },
         relations: ['restaurant'],
       });
       const followedRestaurantIds = follows
         .map((f) => f.restaurant?.id)
-        .filter((id): id is string => !!id);
-
+        .filter((id): id is string => !!id && !ownerRestaurantIds.includes(id));
+      let followedStories: Story[] = [];
       if (followedRestaurantIds.length > 0) {
-        const now = new Date();
-        const stories = await this.storyRepo.find({
+        followedStories = await this.storyRepo.find({
           where: {
             restaurant: { id: In(followedRestaurantIds), isActive: true },
             expiresAt: MoreThan(now),
@@ -411,8 +479,18 @@ export class HomeService {
           relations: ['restaurant', 'reactions', 'reactions.user'],
           order: { createdAt: 'DESC' },
         });
+      }
 
-        storyItems = stories.map((s) => {
+      // Merge: ownerStories first, then followedStories. Map and avoid duplicates.
+      const merged: Story[] = [...ownerStories, ...followedStories];
+      const seen = new Set<string>();
+      storyItems = merged
+        .filter((s: Story) => {
+          if (seen.has(s.id)) return false;
+          seen.add(s.id);
+          return true;
+        })
+        .map((s: Story) => {
           const userReaction =
             s.reactions?.find((r) => r.user?.id === userId)?.type ?? null;
           return {
@@ -428,7 +506,6 @@ export class HomeService {
             hasReacted: userReaction,
           };
         });
-      }
     }
 
     return {

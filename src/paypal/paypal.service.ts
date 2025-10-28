@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from 'src/order/order.entity';
+import { Restaurant } from 'src/restaurant/restaurant.entity';
 
 type PaypalCreateOrderResponse = {
   id: string;
@@ -214,6 +215,98 @@ export class PayPalService {
     return (await response.json()) as PaypalRefundResponse;
   }
 
+  // Create a payout to a recipient (uses PayPal Payouts API)
+  async createPayout(
+    receiverEmail: string,
+    amount: string,
+    currency = 'USD',
+  ): Promise<any> {
+    const accessToken = await this.getAccessToken();
+    const batchId = `batch_${Date.now()}`;
+
+    const body = {
+      sender_batch_header: {
+        sender_batch_id: batchId,
+        email_subject:
+          process.env.PAYPAL_PAYOUT_EMAIL_SUBJECT || 'You have a payout!',
+      },
+      items: [
+        {
+          recipient_type: 'EMAIL',
+          amount: { value: amount, currency },
+          receiver: receiverEmail,
+          note: `Payout ${batchId}`,
+          sender_item_id: `item_${Date.now()}`,
+        },
+      ],
+    };
+
+    const response = await fetch(`${this.baseUrl}/v1/payments/payouts`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new InternalServerErrorException(
+        `Failed to create PayPal payout: ${text}`,
+      );
+    }
+
+    return await response.json();
+  }
+
+  // Create a batch payout (multiple recipients) using PayPal Payouts API
+  async createPayoutBatch(
+    items: Array<{
+      receiver: string;
+      amount: string;
+      currency?: string;
+      note?: string;
+    }>,
+  ): Promise<any> {
+    if (!items || items.length === 0) return null;
+    const accessToken = await this.getAccessToken();
+    const batchId = `batch_${Date.now()}`;
+
+    const body: any = {
+      sender_batch_header: {
+        sender_batch_id: batchId,
+        email_subject:
+          process.env.PAYPAL_PAYOUT_EMAIL_SUBJECT || 'You have a payout!',
+      },
+      items: items.map((it, idx) => ({
+        recipient_type: 'EMAIL',
+        amount: { value: it.amount, currency: it.currency || 'USD' },
+        receiver: it.receiver,
+        note: it.note || `Payout ${batchId}`,
+        sender_item_id: `item_${Date.now()}_${idx}`,
+      })),
+    };
+
+    const response = await fetch(`${this.baseUrl}/v1/payments/payouts`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new InternalServerErrorException(
+        `Failed to create PayPal payout batch: ${text}`,
+      );
+    }
+
+    return await response.json();
+  }
+
   // إنشاء طلب PayPal مرتبط بطلب داخلي
   async createPaypalForOrder(
     orderId: string,
@@ -222,14 +315,16 @@ export class PayPalService {
   ) {
     const order = await this.orderRepo.findOne({
       where: { id: orderId },
-      relations: ['user'],
+      relations: ['user', 'restaurant', 'restaurant.referredBy'],
     });
     if (!order) throw new NotFoundException('Order not found');
     if (userId && String(order.user?.id) !== String(userId)) {
       throw new NotFoundException('Order not found for this user');
     }
-    const amount = Number(order.totalPrice).toFixed(2);
-    const created = await this.createOrder(amount, 'USD', intent);
+    // Charge the customer an extra 10% on top of the order total
+    const base = Number(order.totalPrice || 0);
+    const chargeAmount = (base * 1.1).toFixed(2);
+    const created = await this.createOrder(chargeAmount, 'USD', intent);
     // حفظ ربط الطلب
     order.paymentStatus = 'PENDING';
     order.paypalOrderId = created.id;
@@ -247,7 +342,7 @@ export class PayPalService {
   async capturePaypalForOrder(orderId: string, userId?: string) {
     const order = await this.orderRepo.findOne({
       where: { id: orderId },
-      relations: ['user'],
+      relations: ['user', 'restaurant', 'restaurant.referredBy'],
     });
     if (!order) throw new NotFoundException('Order not found');
     if (userId && String(order.user?.id) !== String(userId)) {
@@ -281,14 +376,88 @@ export class PayPalService {
       return captureOrAuth;
     }
 
+    // determine if capture succeeded
     if (status === 'COMPLETED' || status === 'APPROVED') {
+      // قبل تعديل حالة الطلب، احسب كم عدد الطلبات المدفوعة السابقة لهذا المطعم
+      const restaurantEntity = order.restaurant as Restaurant | undefined;
+      let paidBefore = 0;
+      if (restaurantEntity && restaurantEntity.id) {
+        paidBefore = await this.orderRepo.count({
+          where: {
+            restaurant: { id: restaurantEntity.id },
+            paymentStatus: 'PAID',
+          },
+        });
+      }
+
       order.paymentStatus = 'PAID';
       order.status = 'CONFIRMED';
       order.paypalCaptureId = captureId ?? null;
+      await this.orderRepo.save(order);
+
+      // بعد التأكيد، نفّذ Payouts حسب القاعدة الجديدة:
+      // - العميل يدفع 110% من المبلغ (تم تحصيله في PayPal)
+      // - بشكل افتراضي، المنصة تأخذ 10% (من المبلغ الإضافي)
+      // - إذا كان المطعم مُسجل عبر كود إحالة (referredBy) وكانت هذه من ضمن أول 3 طلبات
+      //   فالتوزيع للأول 3 طلبات: merchant 90% من base، referrer 10% من base، platform 10% (يبقى)
+
+      try {
+        const base = Number(order.totalPrice || 0);
+        const merchantEmail = restaurantEntity?.paypalEmail;
+        const referrerEntity = restaurantEntity?.referredBy as
+          | Restaurant
+          | undefined;
+        const referrerEmail = referrerEntity?.paypalEmail;
+
+        const items: Array<{
+          receiver: string;
+          amount: string;
+          currency?: string;
+          note?: string;
+        }> = [];
+
+        const isWithinFirstThree = Boolean(referrerEntity && paidBefore < 3);
+
+        if (isWithinFirstThree) {
+          // merchant 90% of base, referrer 10% of base
+          if (merchantEmail) {
+            items.push({
+              receiver: merchantEmail,
+              amount: (base * 0.9).toFixed(2),
+              currency: 'USD',
+              note: 'Merchant share (90%)',
+            });
+          }
+          if (referrerEmail) {
+            items.push({
+              receiver: referrerEmail,
+              amount: (base * 0.1).toFixed(2),
+              currency: 'USD',
+              note: 'Referrer commission (10%)',
+            });
+          }
+        } else {
+          // no special referrer split: merchant gets full base
+          if (merchantEmail) {
+            items.push({
+              receiver: merchantEmail,
+              amount: base.toFixed(2),
+              currency: 'USD',
+              note: 'Merchant share (100% of base)',
+            });
+          }
+        }
+
+        if (items.length > 0) {
+          await this.createPayoutBatch(items);
+        }
+      } catch (err) {
+        console.error('PayPal payout(s) failed', err);
+      }
     } else {
       order.paymentStatus = 'FAILED';
+      await this.orderRepo.save(order);
     }
-    await this.orderRepo.save(order);
     return captureOrAuth;
   }
 

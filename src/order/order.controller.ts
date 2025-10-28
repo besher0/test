@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Param, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Param,
+  Body,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
 import { OrderService } from './order.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
@@ -8,9 +16,11 @@ import {
   ApiResponse,
   ApiBody,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { CreateOrderDto } from './dto/dto.create.order';
 import { User } from 'src/user/user.entity';
+import { ForbiddenException } from '@nestjs/common';
 
 // type UserJwt = {
 //   sub: string;
@@ -88,6 +98,62 @@ export class OrderController {
     return this.orderService.getCurrentOrders(user.id);
   }
 
+  // Owner endpoints: only restaurant/store owners can access
+  @Get('owner/currentOrders')
+  @ApiOperation({
+    summary: "Get current (not confirmed) orders for owner's businesses",
+  })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  @ApiQuery({ name: 'limit', required: false, example: '8' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  getOwnerCurrent(
+    @CurrentUser() user: User,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (
+      !user ||
+      (user.userType !== 'restaurant' && user.userType !== 'store')
+    ) {
+      throw new ForbiddenException(
+        'Only business owners can view these orders',
+      );
+    }
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    const perPage = limit ? Math.max(1, Number(limit)) : 8;
+    return this.orderService.getOwnerCurrentOrders(user.id, pageNum, perPage);
+  }
+
+  @Get('owner/unconfirmed')
+  @ApiOperation({
+    summary:
+      "Get unconfirmed orders for owner's businesses plus monthly sales and completed orders count",
+  })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  @ApiQuery({ name: 'limit', required: false, example: '8' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  getOwnerUnconfirmed(
+    @CurrentUser() user: User,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (
+      !user ||
+      (user.userType !== 'restaurant' && user.userType !== 'store')
+    ) {
+      throw new ForbiddenException(
+        'Only business owners can view these orders',
+      );
+    }
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    const perPage = limit ? Math.max(1, Number(limit)) : 8;
+    return this.orderService.getOwnerUnconfirmedWithStats(
+      user.id,
+      pageNum,
+      perPage,
+    );
+  }
+
   @Get('previous')
   @ApiOperation({
     summary: 'Get previous (completed/cancelled) orders for user',
@@ -95,6 +161,32 @@ export class OrderController {
   @ApiResponse({ status: 200, description: 'Success' })
   getPrevious(@CurrentUser() user: User) {
     return this.orderService.getPreviousOrders(user.id);
+  }
+
+  @Get('owner/previous')
+  @ApiOperation({
+    summary:
+      "Get previous (confirmed/delivered/canceled) orders for owner's businesses",
+  })
+  @ApiQuery({ name: 'page', required: false, example: '1' })
+  @ApiQuery({ name: 'limit', required: false, example: '8' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  getOwnerPrevious(
+    @CurrentUser() user: User,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (
+      !user ||
+      (user.userType !== 'restaurant' && user.userType !== 'store')
+    ) {
+      throw new ForbiddenException(
+        'Only business owners can view these orders',
+      );
+    }
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    const perPage = limit ? Math.max(1, Number(limit)) : 8;
+    return this.orderService.getOwnerPreviousOrders(user.id, pageNum, perPage);
   }
 
   @Post(':id/status')
@@ -140,5 +232,27 @@ export class OrderController {
     @Body() body: { reason?: string },
   ) {
     return this.orderService.cancelOrder(user.id, orderId, body?.reason);
+  }
+
+  @Post(':id/reject')
+  @ApiOperation({ summary: 'Business owner rejects an order' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { reason: { type: 'string', example: 'غير متوفر العنصر' } },
+    },
+  })
+  rejectOrderByOwner(
+    @Param('id') orderId: string,
+    @CurrentUser() user: User,
+    @Body() body: { reason?: string },
+  ) {
+    if (
+      !user ||
+      (user.userType !== 'restaurant' && user.userType !== 'store')
+    ) {
+      throw new ForbiddenException('Only business owners can reject orders');
+    }
+    return this.orderService.ownerRejectOrder(user.id, orderId, body?.reason);
   }
 }

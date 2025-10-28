@@ -50,12 +50,11 @@ export class CreateOrderDto {
   @IsOptional()
   longitude?: number;
 
-  @ApiPropertyOptional({ type: [OrderItemDto] })
-  @IsOptional()
+  @ApiProperty({ type: [OrderItemDto] })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
-  items?: OrderItemDto[];
+  items: OrderItemDto[];
 
   @IsOptional()
   @IsString()

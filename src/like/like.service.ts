@@ -98,6 +98,7 @@ async getMealLikes(user: User, type: BusinessType, page = 1, limit = 8) {
     perPage: take,
     total,
     totalPages: Math.ceil(total / take),
+    isLastPage: total === 0 ? true : page >= Math.ceil(total / take),
     meals,
   };
 }
@@ -126,6 +127,7 @@ async getMealLikes(user: User, type: BusinessType, page = 1, limit = 8) {
     perPage: take,
     total,
     totalPages: Math.ceil(total / take),
+    isLastPage: total === 0 ? true : page >= Math.ceil(total / take),
     restaurants,
   };
 }
@@ -176,6 +178,7 @@ async getMealLikes(user: User, type: BusinessType, page = 1, limit = 8) {
     perPage: take,
     total,
     totalPages: Math.ceil(total / take),
+    isLastPage: total === 0 ? true : page >= Math.ceil(total / take),
     countries,
   };
 }

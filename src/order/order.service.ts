@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,6 +15,8 @@ import { User } from 'src/user/user.entity';
 import { CreateOrderDto } from './dto/dto.create.order';
 import { PayPalService } from 'src/paypal/paypal.service';
 import { NotificationService } from 'src/notification/notification.service';
+import { In } from 'typeorm';
+import { Restaurant } from 'src/restaurant/restaurant.entity';
 
 @Injectable()
 export class OrderService {
@@ -37,6 +40,9 @@ export class OrderService {
     let total = 0;
     const items: OrderItem[] = [];
     const sourceItems = Array.isArray(dto.items) ? dto.items : [];
+    if (!sourceItems || sourceItems.length === 0) {
+      throw new BadRequestException('Items are required in the request body');
+    }
     if (sourceItems.length > 0) {
       for (const itemDto of sourceItems) {
         if (
@@ -125,45 +131,367 @@ export class OrderService {
 
     const saved = await this.orderRepo.save(order);
 
-    // تنظيف السلة بعد إنشاء الطلب إذا طلب العميل ذلك
-    if ((!sourceItems || sourceItems.length === 0) && dto.clearCart) {
+    // Notify restaurant owner about new order (best-effort)
+    try {
+      const ownerId = restaurant?.owner?.id;
+      if (ownerId) {
+        // include per-item notes in the notification payload so owner app can show them
+        const itemsForOwner = (saved.items || []).map((it) => ({
+          id: it.id,
+          mealId: it.meal?.id ?? null,
+          name: it.meal?.name ?? null,
+          quantity: it.quantity,
+          price: it.price,
+          note: it.note ?? null,
+        }));
+
+        await this.notificationService.sendToUser(
+          ownerId,
+          'طلب جديد',
+          `لقد وصلك طلب جديد (${saved.id}) من ${user.firstName} ${user.lastName}`,
+          {
+            type: 'new_order',
+            orderId: saved.id,
+            items: itemsForOwner,
+            timestamp: new Date().toISOString(),
+          },
+        );
+      }
+    } catch {
+      // ignore notification errors
+    }
+
+    // تنظيف السلة بعد إنشاء الطلب إذا طلب العميل ذلك (optional)
+    if (dto.clearCart) {
       try {
         await this.cartService.clearCart(userId);
       } catch {
-        // تجاهل خطأ تنظيف السلة حتى لا يؤثر على إنشاء الطلب
+        // ignore clear cart errors
       }
     }
 
     return saved;
   }
 
-  async getCurrentOrders(userId: string): Promise<Order[]> {
-    // Current = not finished yet: PENDING, AUTHORIZED, UNPAID, PENDING
-    return this.orderRepo.find({
+  async getCurrentOrders(userId: string): Promise<any[]> {
+    // Current = not finished yet: PENDING
+    const orders = await this.orderRepo.find({
       where: { user: { id: userId }, status: 'PENDING' },
-      relations: ['items', 'items.meal', 'restaurant'],
+      relations: [
+        'items',
+        'items.meal',
+        'restaurant',
+        'restaurant.owner',
+        'user',
+      ],
       order: { createdAt: 'DESC' },
     });
+    return orders.map((o) => this.mapOrderForUser(o));
   }
 
-  async getPreviousOrders(userId: string): Promise<Order[]> {
+  async getPreviousOrders(userId: string): Promise<any[]> {
     // Previous orders: CONFIRMED, DELIVERED, CANCELED
-    return this.orderRepo.find({
+    const orders = await this.orderRepo.find({
       where: [
         { user: { id: userId }, status: 'CONFIRMED' },
         { user: { id: userId }, status: 'DELIVERED' },
         { user: { id: userId }, status: 'CANCELED' },
       ],
-      relations: ['items', 'items.meal', 'restaurant'],
+      relations: [
+        'items',
+        'items.meal',
+        'restaurant',
+        'restaurant.owner',
+        'user',
+      ],
       order: { createdAt: 'DESC' },
     });
+    return orders.map((o) => this.mapOrderForUser(o));
   }
 
-  async getOrders(userId: string): Promise<Order[]> {
-    return this.orderRepo.find({
-      where: { user: { id: userId } },
-      relations: ['items', 'items.meal'],
+  // Orders for restaurant owners: current (not confirmed yet)
+  async getOwnerCurrentOrders(
+    ownerId: string,
+    page = 1,
+    limit = 8,
+  ): Promise<{
+    page: number;
+    perPage: number;
+    total: number;
+    totalPages: number;
+    isLastPage: boolean;
+    orders: any[];
+  }> {
+    // Verify owner actually has at least one restaurant/store
+    const ownsAny = await this.orderRepo.manager.findOne(Restaurant, {
+      where: { owner: { id: ownerId } },
     });
+    if (!ownsAny) {
+      throw new ForbiddenException('User does not own any business');
+    }
+
+    // Order.status supports: PENDING, CONFIRMED, DELIVERED, CANCELED
+    const statuses = ['PENDING'];
+    const take = limit;
+    const skip = (page - 1) * take;
+    const [orders, total] = await this.orderRepo.findAndCount({
+      where: { restaurant: { owner: { id: ownerId } }, status: In(statuses) },
+      relations: ['items', 'items.meal', 'restaurant', 'restaurant.owner'],
+      order: { createdAt: 'DESC' },
+      take,
+      skip,
+    });
+    const totalPages = Math.ceil(total / take);
+    const isLastPage = total === 0 ? true : page >= totalPages;
+    // Map to lightweight DTO for owner
+    const ordersDto = orders.map((o) => this.mapOrderForOwner(o));
+    return {
+      page,
+      perPage: take,
+      total,
+      totalPages,
+      isLastPage,
+      orders: ordersDto,
+    };
+  }
+
+  /**
+   * Returns unconfirmed orders for owner (PENDING/AUTHORIZED/UNPAID) with monthly stats
+   * stats: { monthSales: number, completedOrdersThisMonth: number }
+   */
+  async getOwnerUnconfirmedWithStats(
+    ownerId: string,
+    page = 1,
+    limit = 8,
+  ): Promise<{
+    page: number;
+    perPage: number;
+    total: number;
+    totalPages: number;
+    isLastPage: boolean;
+    orders: any[];
+    stats: { monthSales: number; completedOrdersThisMonth: number };
+  }> {
+    // Verify owner actually has at least one restaurant/store
+    const ownsAny = await this.orderRepo.manager.findOne(Restaurant, {
+      where: { owner: { id: ownerId } },
+    });
+    if (!ownsAny) {
+      throw new ForbiddenException('User does not own any business');
+    }
+
+    // Order.status supports: PENDING, CONFIRMED, DELIVERED, CANCELED
+    const statuses = ['PENDING'];
+    const take = limit;
+    const skip = (page - 1) * take;
+    const [orders, total] = await this.orderRepo.findAndCount({
+      where: { restaurant: { owner: { id: ownerId } }, status: In(statuses) },
+      relations: ['items', 'items.meal', 'restaurant', 'restaurant.owner'],
+      order: { createdAt: 'DESC' },
+      take,
+      skip,
+    });
+    const totalPages = Math.ceil(total / take);
+    const isLastPage = total === 0 ? true : page >= totalPages;
+    const ordersDto = orders.map((o) => this.mapOrderForOwner(o));
+
+    // Compute monthly stats for current month (based on createdAt)
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-based
+    const monthStart = new Date(year, month, 1);
+    const monthEnd = new Date(year, month + 1, 1);
+
+    // Total sales for month: sum of totalPrice for orders of this owner's restaurants that are CONFIRMED or DELIVERED in the month
+    const salesQuery = this.orderRepo
+      .createQueryBuilder('order')
+      .select('SUM(order.totalPrice)', 'sum')
+      // join restaurant and its owner, then filter by owner id (safe across naming strategies)
+      .innerJoin('order.restaurant', 'r')
+      .innerJoin('r.owner', 'o')
+      .where('o.id = :ownerId', { ownerId })
+      .andWhere('order.createdAt >= :start', {
+        start: monthStart.toISOString(),
+      })
+      .andWhere('order.createdAt < :end', { end: monthEnd.toISOString() })
+      .andWhere('order.status IN (:...s)', { s: ['CONFIRMED', 'DELIVERED'] });
+
+    const salesResult: { sum: string | null } | undefined =
+      await salesQuery.getRawOne();
+    const monthSales = Number(salesResult?.sum ?? 0) || 0;
+
+    // Completed orders this month: count of orders with status CONFIRMED or DELIVERED in the month
+    const countQuery = this.orderRepo
+      .createQueryBuilder('order')
+      .select('COUNT(1)', 'count')
+      .innerJoin('order.restaurant', 'r')
+      .innerJoin('r.owner', 'o')
+      .where('o.id = :ownerId', { ownerId })
+      .andWhere('order.createdAt >= :start', {
+        start: monthStart.toISOString(),
+      })
+      .andWhere('order.createdAt < :end', { end: monthEnd.toISOString() })
+      .andWhere('order.status IN (:...s)', { s: ['CONFIRMED', 'DELIVERED'] });
+
+    const countResult: { count: string } | undefined =
+      await countQuery.getRawOne();
+    const completedOrdersThisMonth = Number(countResult?.count ?? 0) || 0;
+
+    return {
+      page,
+      perPage: take,
+      total,
+      totalPages,
+      isLastPage,
+      orders: ordersDto,
+      stats: { monthSales, completedOrdersThisMonth },
+    };
+  }
+
+  // Orders for restaurant owners: previous (confirmed/delivered/canceled)
+  async getOwnerPreviousOrders(
+    ownerId: string,
+    page = 1,
+    limit = 8,
+  ): Promise<{
+    page: number;
+    perPage: number;
+    total: number;
+    totalPages: number;
+    isLastPage: boolean;
+    orders: any[];
+  }> {
+    // Verify owner actually has at least one restaurant/store
+    const ownsAny = await this.orderRepo.manager.findOne(Restaurant, {
+      where: { owner: { id: ownerId } },
+    });
+    if (!ownsAny) {
+      throw new ForbiddenException('User does not own any business');
+    }
+
+    const statuses = ['CONFIRMED', 'DELIVERED', 'CANCELED'];
+    const take = limit;
+    const skip = (page - 1) * take;
+    const [orders, total] = await this.orderRepo.findAndCount({
+      where: { restaurant: { owner: { id: ownerId } }, status: In(statuses) },
+      relations: ['items', 'items.meal', 'restaurant', 'restaurant.owner'],
+      order: { createdAt: 'DESC' },
+      take,
+      skip,
+    });
+    const totalPages = Math.ceil(total / take);
+    const isLastPage = total === 0 ? true : page >= totalPages;
+    const ordersDto = orders.map((o) => this.mapOrderForOwner(o));
+    return {
+      page,
+      perPage: take,
+      total,
+      totalPages,
+      isLastPage,
+      orders: ordersDto,
+    };
+  }
+
+  private mapOrderForOwner(order: Order) {
+    return {
+      id: order.id,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      totalPrice: order.totalPrice,
+      createdAt: order.createdAt,
+      restaurant: order.restaurant
+        ? {
+            id: order.restaurant.id,
+            name: order.restaurant.name,
+            location: order.restaurant.location,
+            logo_url: order.restaurant.logo_url,
+            mainImage: order.restaurant.mainImage,
+            isActive: order.restaurant.isActive,
+            owner: order.restaurant.owner
+              ? {
+                  id: order.restaurant.owner.id,
+                  firstName: order.restaurant.owner.firstName,
+                  lastName: order.restaurant.owner.lastName,
+                  email: order.restaurant.owner.email,
+                }
+              : null,
+          }
+        : null,
+      user: order.user
+        ? {
+            id: order.user.id,
+            firstName: order.user.firstName,
+            lastName: order.user.lastName,
+            email: order.user.email,
+          }
+        : null,
+      items: (order.items || []).map((it) => ({
+        id: it.id,
+        mealId: it.meal?.id ?? null,
+        name: it.meal?.name ?? null,
+        quantity: it.quantity,
+        price: it.price,
+        note: it.note ?? null,
+      })),
+    };
+  }
+
+  private mapOrderForUser(order: Order) {
+    return {
+      id: order.id,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      totalPrice: order.totalPrice,
+      createdAt: order.createdAt,
+      restaurant: order.restaurant
+        ? {
+            id: order.restaurant.id,
+            name: order.restaurant.name,
+            location: order.restaurant.location,
+            logo_url: order.restaurant.logo_url,
+            mainImage: order.restaurant.mainImage,
+            owner: order.restaurant.owner
+              ? {
+                  id: order.restaurant.owner.id,
+                  firstName: order.restaurant.owner.firstName,
+                  lastName: order.restaurant.owner.lastName,
+                  email: order.restaurant.owner.email,
+                }
+              : null,
+          }
+        : null,
+      user: order.user
+        ? {
+            id: order.user.id,
+            firstName: order.user.firstName,
+            lastName: order.user.lastName,
+            email: order.user.email,
+          }
+        : null,
+      items: (order.items || []).map((it) => ({
+        id: it.id,
+        mealId: it.meal?.id ?? null,
+        name: it.meal?.name ?? null,
+        quantity: it.quantity,
+        price: it.price,
+        note: it.note ?? null,
+      })),
+    };
+  }
+
+  async getOrders(userId: string): Promise<any[]> {
+    const orders = await this.orderRepo.find({
+      where: { user: { id: userId } },
+      relations: [
+        'items',
+        'items.meal',
+        'restaurant',
+        'restaurant.owner',
+        'user',
+      ],
+      order: { createdAt: 'DESC' },
+    });
+    return orders.map((o) => this.mapOrderForUser(o));
   }
 
   async updateStatus(orderId: string, status: string): Promise<Order> {
@@ -206,6 +534,13 @@ export class OrderService {
             order.user.id,
             'فشل عملية الدفع',
             `عذراً، فشلت عملية السحب لطلبك ${order.id}. يرجى المحاولة لاحقاً.`,
+            {
+              type: 'order_status',
+              orderId: order.id,
+              status: order.status,
+              color: 'red',
+              timestamp: new Date().toISOString(),
+            },
           );
         } catch {
           // ignore notification errors
@@ -219,6 +554,13 @@ export class OrderService {
               ownerId,
               'فشل سحب الدفع لطلب',
               `الطلب ${order.id} فشل أثناء سحب المبلغ.`,
+              {
+                type: 'order_status',
+                orderId: order.id,
+                status: order.status,
+                color: 'red',
+                timestamp: new Date().toISOString(),
+              },
             );
           }
         } catch {
@@ -227,6 +569,78 @@ export class OrderService {
 
         return order;
       }
+    }
+
+    // Notify user when order gets confirmed (after any capture) or delivered
+    try {
+      if (prevStatus !== 'CONFIRMED' && status === 'CONFIRMED') {
+        await this.notificationService.sendToUser(
+          order.user.id,
+          'تم تأكيد الطلب',
+          `طلبك ${order.id} تم تأكيده وسيتم التحضير قريباً.`,
+          {
+            type: 'order_status',
+            orderId: order.id,
+            status: 'CONFIRMED',
+            color: 'green',
+            timestamp: new Date().toISOString(),
+          },
+        );
+      }
+      if (prevStatus !== 'DELIVERED' && status === 'DELIVERED') {
+        await this.notificationService.sendToUser(
+          order.user.id,
+          'تم توصيل الطلب',
+          `تم توصيل طلبك ${order.id}. نتمنى أن تكون وجبتك لذيذة!`,
+          {
+            type: 'order_status',
+            orderId: order.id,
+            status: 'DELIVERED',
+            color: 'green',
+            timestamp: new Date().toISOString(),
+          },
+        );
+      }
+    } catch {
+      // ignore notification errors
+    }
+
+    // General cancellation notification: cover owner-initiated cancels and other cases
+    try {
+      if (prevStatus !== 'CANCELED' && status === 'CANCELED') {
+        // notify customer
+        await this.notificationService.sendToUser(
+          order.user.id,
+          'تم إلغاء الطلب',
+          `تم إلغاء طلبك ${order.id}. سنعمل على التوضيح مع المطعم إذا لزم الأمر.`,
+          {
+            type: 'order_status',
+            orderId: order.id,
+            status: 'CANCELED',
+            color: 'red',
+            timestamp: new Date().toISOString(),
+          },
+        );
+
+        // notify restaurant owner as acknowledgement
+        const ownerId = order.restaurant?.owner?.id;
+        if (ownerId) {
+          await this.notificationService.sendToUser(
+            ownerId,
+            'تم إلغاء الطلب',
+            `الطلب ${order.id} تم إلغاؤه.`,
+            {
+              type: 'order_status',
+              orderId: order.id,
+              status: 'CANCELED',
+              color: 'red',
+              timestamp: new Date().toISOString(),
+            },
+          );
+        }
+      }
+    } catch {
+      // ignore notification errors
     }
 
     // حالة إلغاء الطلب قبل التأكيد: void authorization وابلاغ
@@ -245,6 +659,13 @@ export class OrderService {
               order.user.id,
               'تم إلغاء الطلب وإلغاء الحجز',
               `تم إلغاء طلبك ${order.id} وتم رفع حجز المبلغ.`,
+              {
+                type: 'order_status',
+                orderId: order.id,
+                status: 'CANCELED',
+                color: 'red',
+                timestamp: new Date().toISOString(),
+              },
             );
           } catch {
             // ignore notification errors
@@ -258,6 +679,13 @@ export class OrderService {
                 ownerId,
                 'تم إلغاء الطلب',
                 `الطلب ${order.id} تم إلغاؤه من قبل العميل.`,
+                {
+                  type: 'order_status',
+                  orderId: order.id,
+                  status: 'CANCELED',
+                  color: 'red',
+                  timestamp: new Date().toISOString(),
+                },
               );
             }
           } catch {
@@ -309,6 +737,13 @@ export class OrderService {
           order.user.id,
           'تم إلغاء الطلب',
           `تم إلغاء طلبك ${order.id}. ${reason ?? ''}`,
+          {
+            type: 'order_status',
+            orderId: order.id,
+            status: 'CANCELED',
+            color: 'red',
+            timestamp: new Date().toISOString(),
+          },
         );
       } catch (_err) {
         console.warn('notify user failed', _err);
@@ -322,6 +757,13 @@ export class OrderService {
             ownerId,
             'تم إلغاء طلب',
             `تم إلغاء الطلب ${order.id} من قبل العميل. ${reason ?? ''}`,
+            {
+              type: 'order_status',
+              orderId: order.id,
+              status: 'CANCELED',
+              color: 'red',
+              timestamp: new Date().toISOString(),
+            },
           );
         }
       } catch (_err) {
@@ -352,6 +794,13 @@ export class OrderService {
           order.user.id,
           'تم إلغاء الطلب',
           `تم إلغاء طلبك ${order.id}. سيتم معالجة الاسترداد إن وُجد. ${reason ?? ''}`,
+          {
+            type: 'order_status',
+            orderId: order.id,
+            status: 'CANCELED',
+            color: 'red',
+            timestamp: new Date().toISOString(),
+          },
         );
       } catch (_err) {
         console.warn('notify user failed', _err);
@@ -364,6 +813,13 @@ export class OrderService {
             ownerId,
             'تم إلغاء طلب',
             `تم إلغاء الطلب ${order.id} بواسطة العميل. ${reason ?? ''}`,
+            {
+              type: 'order_status',
+              orderId: order.id,
+              status: 'CANCELED',
+              color: 'red',
+              timestamp: new Date().toISOString(),
+            },
           );
         }
       } catch (_err) {
@@ -382,6 +838,13 @@ export class OrderService {
         order.user.id,
         'تم إلغاء الطلب',
         `تم إلغاء طلبك ${order.id}. ${reason ?? ''}`,
+        {
+          type: 'order_status',
+          orderId: order.id,
+          status: 'CANCELED',
+          color: 'red',
+          timestamp: new Date().toISOString(),
+        },
       );
     } catch (_err) {
       console.warn('notify user failed', _err);
@@ -393,10 +856,89 @@ export class OrderService {
           ownerId,
           'تم إلغاء طلب',
           `تم إلغاء الطلب ${order.id} بواسطة العميل. ${reason ?? ''}`,
+          {
+            type: 'order_status',
+            orderId: order.id,
+            status: 'CANCELED',
+            color: 'red',
+            timestamp: new Date().toISOString(),
+          },
         );
       }
     } catch (_err) {
       console.warn('notify owner failed', _err);
+    }
+
+    return order;
+  }
+
+  // Owner rejects an order (ownerId = restaurant.owner.id)
+  async ownerRejectOrder(
+    ownerId: string,
+    orderId: string,
+    reason?: string,
+  ): Promise<Order> {
+    const order = await this.orderRepo.findOne({
+      where: { id: orderId },
+      relations: ['user', 'restaurant', 'restaurant.owner'],
+    });
+    if (!order) throw new NotFoundException('Order not found');
+
+    const owner = order.restaurant?.owner;
+    if (!owner || String(owner.id) !== String(ownerId)) {
+      throw new ForbiddenException('Not allowed to reject this order');
+    }
+
+    // mark canceled/rejected
+    order.status = 'CANCELED';
+    await this.orderRepo.save(order);
+
+    // notify customer about rejection (persisted by NotificationService)
+    try {
+      const bodyText = reason
+        ? `طلبك ${order.id} رُفض: ${reason}`
+        : `تم رفض طلبك ${order.id} من قبل المطعم`;
+      await this.notificationService.sendToUser(
+        order.user.id,
+        'تم رفض الطلب',
+        bodyText,
+        {
+          type: 'order_status',
+          orderId: order.id,
+          status: 'CANCELED',
+          reason: reason ?? null,
+          color: 'red',
+          timestamp: new Date().toISOString(),
+        },
+      );
+    } catch (e) {
+      // ignore notification failures
+      console.warn('Failed to send rejection notification', e);
+    }
+
+    // send confirmation notification to the owner (persisted)
+    try {
+      const ownerId = order.restaurant?.owner?.id;
+      if (ownerId) {
+        const ownerBody = reason
+          ? `لقد رفضت الطلب ${order.id}. السبب: ${reason}`
+          : `تم رفض الطلب ${order.id} وتم تنفيذ الإجراء.`;
+        await this.notificationService.sendToUser(
+          ownerId,
+          'تم تنفيذ رفض الطلب',
+          ownerBody,
+          {
+            type: 'order_action',
+            orderId: order.id,
+            action: 'REJECTED',
+            reason: reason ?? null,
+            color: 'red',
+            timestamp: new Date().toISOString(),
+          },
+        );
+      }
+    } catch (e) {
+      console.warn('Failed to send owner confirmation notification', e);
     }
 
     return order;

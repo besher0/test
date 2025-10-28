@@ -83,102 +83,110 @@ export class DashboardController {
     });
   }
 
-  @Get('overview')
+ // @Get('overview')
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles('admin')
+  // @ApiBearerAuth()
+  // @ApiQuery({
+  //   name: 'businessType',
+  //   enum: ['restaurant', 'store'],
+  //   required: false,
+  // })
+  // @ApiQuery({
+  //   name: 'from',
+  //   required: false,
+  //   description: 'ISO date (inclusive)',
+  // })
+  // @ApiQuery({
+  //   name: 'to',
+  //   required: false,
+  //   description: 'ISO date (inclusive)',
+  // })
+  // overview(
+  //   @Query('businessType') businessType?: BusinessType,
+  //   @Query('from') from?: string,
+  //   @Query('to') to?: string,
+  // ) {
+  //   const range = this.parseRange(from, to);
+  //   return this.dashboardService.getOverview({ businessType, ...range });
+  // }
+
+  @Get('admin/summary')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiQuery({
-    name: 'businessType',
-    enum: ['restaurant', 'store'],
-    required: false,
-  })
-  @ApiQuery({
-    name: 'from',
-    required: false,
-    description: 'ISO date (inclusive)',
-  })
-  @ApiQuery({
-    name: 'to',
-    required: false,
-    description: 'ISO date (inclusive)',
-  })
-  overview(
-    @Query('businessType') businessType?: BusinessType,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-  ) {
-    const range = this.parseRange(from, to);
-    return this.dashboardService.getOverview({ businessType, ...range });
+  adminSummary() {
+    return this.dashboardService.getAdminSummary();
   }
 
-  @Get('top-restaurants')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiQuery({
-    name: 'businessType',
-    enum: ['restaurant', 'store'],
-    required: true,
-  })
-  @ApiQuery({ name: 'metric', enum: ['orders', 'revenue'], required: false })
-  @ApiQuery({ name: 'limit', required: false })
-  @ApiQuery({ name: 'from', required: false })
-  @ApiQuery({ name: 'to', required: false })
-  topRestaurants(
-    @Query('businessType') businessType: BusinessType,
-    @Query('metric') metric: 'orders' | 'revenue' = 'orders',
-    @Query('limit') limit = '7',
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-  ) {
-    const range = this.parseRange(from, to);
-    return this.dashboardService.getTopRestaurants({
-      businessType,
-      metric,
-      limit: Number(limit) || 7,
-      ...range,
-    });
-  }
+  // @Get('top-restaurants')
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles('admin')
+  // @ApiBearerAuth()
+  // @ApiQuery({
+  //   name: 'businessType',
+  //   enum: ['restaurant', 'store'],
+  //   required: true,
+  // })
+  // @ApiQuery({ name: 'metric', enum: ['orders', 'revenue'], required: false })
+  // @ApiQuery({ name: 'limit', required: false })
+  // @ApiQuery({ name: 'from', required: false })
+  // @ApiQuery({ name: 'to', required: false })
+  // topRestaurants(
+  //   @Query('businessType') businessType: BusinessType,
+  //   @Query('metric') metric: 'orders' | 'revenue' = 'orders',
+  //   @Query('limit') limit = '7',
+  //   @Query('from') from?: string,
+  //   @Query('to') to?: string,
+  // ) {
+  //   const range = this.parseRange(from, to);
+  //   return this.dashboardService.getTopRestaurants({
+  //     businessType,
+  //     metric,
+  //     limit: Number(limit) || 7,
+  //     ...range,
+  //   });
+  // }
 
-  @Get('top-categories')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiQuery({
-    name: 'businessType',
-    enum: ['restaurant', 'store'],
-    required: true,
-  })
-  @ApiQuery({ name: 'limit', required: false })
-  topCategories(
-    @Query('businessType') businessType: BusinessType,
-    @Query('limit') limit = '7',
-  ) {
-    return this.dashboardService.getTopCategories({
-      businessType,
-      limit: Number(limit) || 7,
-    });
-  }
+  // @Get('top-categories')
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles('admin')
+  // @ApiBearerAuth()
+  // @ApiQuery({
+  //   name: 'businessType',
+  //   enum: ['restaurant', 'store'],
+  //   required: true,
+  // })
+  // @ApiQuery({ name: 'limit', required: false })
+  // topCategories(
+  //   @Query('businessType') businessType: BusinessType,
+  //   @Query('limit') limit = '7',
+  // ) {
+  //   return this.dashboardService.getTopCategories({
+  //     businessType,
+  //     limit: Number(limit) || 7,
+  //   });
+  // }
 
-  @Get('top-countries')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiQuery({
-    name: 'businessType',
-    enum: ['restaurant', 'store'],
-    required: true,
-  })
-  @ApiQuery({ name: 'limit', required: false })
-  topCountries(
-    @Query('businessType') businessType: BusinessType,
-    @Query('limit') limit = '7',
-  ) {
-    return this.dashboardService.getTopCountries({
-      businessType,
-      limit: Number(limit) || 7,
-    });
-  }
+  // @Get('top-countries')
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles('admin')
+  // @ApiBearerAuth()
+  // @ApiQuery({
+  //   name: 'businessType',
+  //   enum: ['restaurant', 'store'],
+  //   required: true,
+  // })
+  // @ApiQuery({ name: 'limit', required: false })
+  // topCountries(
+  //   @Query('businessType') businessType: BusinessType,
+  //   @Query('limit') limit = '7',
+  // ) {
+  //   return this.dashboardService.getTopCountries({
+  //     businessType,
+  //     limit: Number(limit) || 7,
+  //   });
+  // }
 
   private parseRange(from?: string, to?: string) {
     let fromDate: Date | undefined;

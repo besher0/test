@@ -106,11 +106,38 @@ export class StoryController {
   })
   @Get()
   @ApiQuery({ name: 'type', enum: BusinessType, required: false })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Number of stories per page (default 20)',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (default 1)',
+  })
+  @ApiQuery({
+    name: 'ownerCap',
+    required: false,
+    description: 'Max number of owner stories to return first (default 10)',
+  })
   async getStories(
     @CurrentUser() user: User,
     @Query('type') type?: BusinessType,
+    @Query('limit') limitStr?: string,
+    @Query('page') page?: string,
+    @Query('ownerCap') ownerCap?: string,
   ) {
-    return this.storyService.getStoriesForUser(user.id, type);
+    const limit = limitStr ? Math.max(1, Math.min(100, Number(limitStr))) : 20;
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    const ownerCapNum = ownerCap
+      ? Math.max(1, Math.min(100, Number(ownerCap)))
+      : 10;
+    return this.storyService.getStoriesForUser(user.id, type, {
+      limit,
+      page: pageNum,
+      ownerCap: ownerCapNum,
+    });
   }
 
   @ApiBearerAuth()
