@@ -32,7 +32,7 @@ export class OrderService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  async createOrder(userId: string, dto: CreateOrderDto): Promise<Order> {
+  async createOrder(userId: string, dto: CreateOrderDto): Promise<any> {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
@@ -54,6 +54,7 @@ export class OrderService {
         }
         const meal = await this.mealRepo.findOne({
           where: { id: itemDto.mealId },
+          relations: ['restaurant', 'restaurant.owner'],
         });
         if (!meal) throw new NotFoundException('Meal not found');
         const price = meal.price * itemDto.quantity;
@@ -75,9 +76,17 @@ export class OrderService {
         );
       }
       for (const cItem of cart.items) {
-        const meal = cItem.meal;
+        let meal = cItem.meal;
         if (!meal) {
           throw new NotFoundException('Meal not found in cart item');
+        }
+        // ensure meal has restaurant relation loaded
+        if (!meal.restaurant) {
+          const mealFull = await this.mealRepo.findOne({
+            where: { id: meal.id },
+            relations: ['restaurant', 'restaurant.owner'],
+          });
+          if (mealFull) meal = mealFull;
         }
         const quantity = cItem.quantity;
         const price = Number(meal.price) * quantity;
@@ -131,12 +140,25 @@ export class OrderService {
 
     const saved = await this.orderRepo.save(order);
 
+    // Reload saved order with relations so restaurant/user data are populated
+    const full = await this.orderRepo.findOne({
+      where: { id: saved.id },
+      relations: [
+        'items',
+        'items.meal',
+        'restaurant',
+        'restaurant.owner',
+        'user',
+        'deliveryLocation',
+      ],
+    });
+
     // Notify restaurant owner about new order (best-effort)
     try {
-      const ownerId = restaurant?.owner?.id;
+      const ownerId = full?.restaurant?.owner?.id;
       if (ownerId) {
         // include per-item notes in the notification payload so owner app can show them
-        const itemsForOwner = (saved.items || []).map((it) => ({
+        const itemsForOwner = (full.items || []).map((it) => ({
           id: it.id,
           mealId: it.meal?.id ?? null,
           name: it.meal?.name ?? null,
@@ -148,10 +170,10 @@ export class OrderService {
         await this.notificationService.sendToUser(
           ownerId,
           'طلب جديد',
-          `لقد وصلك طلب جديد (${saved.id}) من ${user.firstName} ${user.lastName}`,
+          `لقد وصلك طلب جديد (${full.id}) من ${user.firstName} ${user.lastName}`,
           {
             type: 'new_order',
-            orderId: saved.id,
+            orderId: full.id,
             items: itemsForOwner,
             timestamp: new Date().toISOString(),
           },
@@ -170,7 +192,8 @@ export class OrderService {
       }
     }
 
-    return saved;
+    // return the same shape as the GET endpoints (map for user)
+    return this.mapOrderForUser((full as unknown as Order) ?? saved);
   }
 
   async getCurrentOrders(userId: string): Promise<any[]> {
@@ -183,6 +206,7 @@ export class OrderService {
         'restaurant',
         'restaurant.owner',
         'user',
+        'deliveryLocation',
       ],
       order: { createdAt: 'DESC' },
     });
@@ -203,6 +227,7 @@ export class OrderService {
         'restaurant',
         'restaurant.owner',
         'user',
+        'deliveryLocation',
       ],
       order: { createdAt: 'DESC' },
     });
@@ -236,7 +261,14 @@ export class OrderService {
     const skip = (page - 1) * take;
     const [orders, total] = await this.orderRepo.findAndCount({
       where: { restaurant: { owner: { id: ownerId } }, status: In(statuses) },
-      relations: ['items', 'items.meal', 'restaurant', 'restaurant.owner'],
+      relations: [
+        'items',
+        'items.meal',
+        'restaurant',
+        'restaurant.owner',
+        'user',
+        'deliveryLocation',
+      ],
       order: { createdAt: 'DESC' },
       take,
       skip,
@@ -286,7 +318,14 @@ export class OrderService {
     const skip = (page - 1) * take;
     const [orders, total] = await this.orderRepo.findAndCount({
       where: { restaurant: { owner: { id: ownerId } }, status: In(statuses) },
-      relations: ['items', 'items.meal', 'restaurant', 'restaurant.owner'],
+      relations: [
+        'items',
+        'items.meal',
+        'restaurant',
+        'restaurant.owner',
+        'user',
+        'deliveryLocation',
+      ],
       order: { createdAt: 'DESC' },
       take,
       skip,
@@ -374,7 +413,14 @@ export class OrderService {
     const skip = (page - 1) * take;
     const [orders, total] = await this.orderRepo.findAndCount({
       where: { restaurant: { owner: { id: ownerId } }, status: In(statuses) },
-      relations: ['items', 'items.meal', 'restaurant', 'restaurant.owner'],
+      relations: [
+        'items',
+        'items.meal',
+        'restaurant',
+        'restaurant.owner',
+        'user',
+        'deliveryLocation',
+      ],
       order: { createdAt: 'DESC' },
       take,
       skip,
@@ -423,12 +469,28 @@ export class OrderService {
             firstName: order.user.firstName,
             lastName: order.user.lastName,
             email: order.user.email,
+            profile_picture: order.user.profile_picture ?? null,
           }
         : null,
+      deliveryType: order.deliveryType,
+      deliveryLocation: order.deliveryLocation
+        ? {
+            id: order.deliveryLocation.id,
+            name: order.deliveryLocation.name,
+            description: order.deliveryLocation.description ?? null,
+            latitude: Number(order.deliveryLocation.latitude),
+            longitude: Number(order.deliveryLocation.longitude),
+          }
+        : null,
+      address: order.address ?? null,
+      scheduledAt: order.scheduledAt ?? null,
+      userLatitude: order.userLatitude ?? null,
+      userLongitude: order.userLongitude ?? null,
       items: (order.items || []).map((it) => ({
         id: it.id,
         mealId: it.meal?.id ?? null,
         name: it.meal?.name ?? null,
+        mealImage: it.meal?.image_url ?? null,
         quantity: it.quantity,
         price: it.price,
         note: it.note ?? null,
@@ -466,12 +528,28 @@ export class OrderService {
             firstName: order.user.firstName,
             lastName: order.user.lastName,
             email: order.user.email,
+            profile_picture: order.user.profile_picture ?? null,
           }
         : null,
+      deliveryType: order.deliveryType,
+      deliveryLocation: order.deliveryLocation
+        ? {
+            id: order.deliveryLocation.id,
+            name: order.deliveryLocation.name,
+            description: order.deliveryLocation.description ?? null,
+            latitude: Number(order.deliveryLocation.latitude),
+            longitude: Number(order.deliveryLocation.longitude),
+          }
+        : null,
+      address: order.address ?? null,
+      scheduledAt: order.scheduledAt ?? null,
+      userLatitude: order.userLatitude ?? null,
+      userLongitude: order.userLongitude ?? null,
       items: (order.items || []).map((it) => ({
         id: it.id,
         mealId: it.meal?.id ?? null,
         name: it.meal?.name ?? null,
+        mealImage: it.meal?.image_url ?? null,
         quantity: it.quantity,
         price: it.price,
         note: it.note ?? null,
@@ -523,12 +601,12 @@ export class OrderService {
         }
         // سيتم تحديث الحقول داخل PayPalService
       } catch {
-        // فشل في الـ capture -> ضع حالة الدفع FAILED وألغِ الطلب وابلّغ المستخدم والمطعم
+        // If capture fails, mark payment as FAILED and cancel the order.
         order.paymentStatus = 'FAILED';
         order.status = 'CANCELED';
         await this.orderRepo.save(order);
 
-        // إرسال إشعار للعميل
+        // Notify the customer about failure
         try {
           await this.notificationService.sendToUser(
             order.user.id,
@@ -546,7 +624,7 @@ export class OrderService {
           // ignore notification errors
         }
 
-        // إرسال إشعار لمالك المطعم إن وُجد
+        // Notify restaurant owner if present
         try {
           const ownerId = order.restaurant?.owner?.id;
           if (ownerId) {

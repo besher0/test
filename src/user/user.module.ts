@@ -4,6 +4,7 @@ import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { User } from '../user/user.entity';
 import { AuthModule } from 'src/auth/auth.module';
+import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 import { Cart } from 'src/cart/cart.entity';
 import { Order } from 'src/order/order.entity';
 import { JwtModule } from '@nestjs/jwt';
@@ -13,6 +14,7 @@ import { Category } from 'src/category/category.entity';
   imports: [
     TypeOrmModule.forFeature([User, Cart, Order, Category]),
     forwardRef(() => AuthModule),
+    CloudinaryModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'your_jwt_secret',
       signOptions: { expiresIn: '5d' },

@@ -21,6 +21,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { OptionalAuthGuard } from 'src/auth/guards/optional-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
@@ -99,8 +100,7 @@ export class StoryController {
     return this.storyService.deleteStory(user, id);
   }
 
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalAuthGuard)
   @ApiOperation({
     summary: 'Get stories from followed restaurants (48h expiry)',
   })
@@ -122,7 +122,7 @@ export class StoryController {
     description: 'Max number of owner stories to return first (default 10)',
   })
   async getStories(
-    @CurrentUser() user: User,
+    @CurrentUser() user?: User,
     @Query('type') type?: BusinessType,
     @Query('limit') limitStr?: string,
     @Query('page') page?: string,
@@ -133,7 +133,7 @@ export class StoryController {
     const ownerCapNum = ownerCap
       ? Math.max(1, Math.min(100, Number(ownerCap)))
       : 10;
-    return this.storyService.getStoriesForUser(user.id, type, {
+    return this.storyService.getStoriesForUser(user?.id, type, {
       limit,
       page: pageNum,
       ownerCap: ownerCapNum,

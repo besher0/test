@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiQuery, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
-import { BusinessType } from '../common/business-type.enum';
+// BusinessType intentionally not used in active routes (left in commented code blocks)
 import { RestaurantService } from '../restaurant/restaurant.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -83,7 +83,7 @@ export class DashboardController {
     });
   }
 
- // @Get('overview')
+  // @Get('overview')
   // @UseGuards(JwtAuthGuard, RolesGuard)
   // @Roles('admin')
   // @ApiBearerAuth()

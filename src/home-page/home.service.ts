@@ -491,6 +491,12 @@ export class HomeService {
           return true;
         })
         .map((s: Story) => {
+          const like =
+            s.reactions?.filter((r) => r.type === 'like').length ?? 0;
+          const love =
+            s.reactions?.filter((r) => r.type === 'love').length ?? 0;
+          const fire =
+            s.reactions?.filter((r) => r.type === 'fire').length ?? 0;
           const userReaction =
             s.reactions?.find((r) => r.user?.id === userId)?.type ?? null;
           return {
@@ -503,6 +509,7 @@ export class HomeService {
             restaurant: s.restaurant
               ? { id: s.restaurant.id, name: s.restaurant.name }
               : null,
+            reactions: { like, love, fire },
             hasReacted: userReaction,
           };
         });

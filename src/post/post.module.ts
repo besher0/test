@@ -7,10 +7,11 @@ import { Restaurant } from 'src/restaurant/restaurant.entity';
 import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 import { PostReaction } from './post-reaction.entity';
 import { Story } from 'src/story/story.entity';
+import { Follow } from 'src/follow/follow.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Post, Restaurant, PostReaction, Story]),
+    TypeOrmModule.forFeature([Post, Restaurant, PostReaction, Story, Follow]),
     CloudinaryModule,
   ],
   providers: [PostService],

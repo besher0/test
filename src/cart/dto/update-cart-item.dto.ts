@@ -1,17 +1,10 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { AddToCartDto } from './dto.createCart'; // تأكد من المسار الصحيح AddToCartDto
-import { IsNumber, IsNotEmpty, Min } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger'; // **استيراد Swagger**
+import { ApiProperty } from '@nestjs/swagger';
+import { IsInt, Min } from 'class-validator';
 
-export class UpdateCartItemDto extends PartialType(AddToCartDto) {
-  @ApiProperty({
-    example: 3,
-    description: 'الكمية المحدثة لعنصر السلة',
-    type: Number,
-    minimum: 0, // يمكن أن تكون 0 لحذف العنصر
-  })
-  @IsNumber()
-  @IsNotEmpty()
-  @Min(0) // يمكن أن تكون 0 لحذف العنصر
+export class UpdateCartItemDto {
+  @ApiProperty({ example: 2, description: 'New quantity for the cart item' })
+  @IsInt()
+  // allow zero and positive values; service will remove if zero
+  @Min(0)
   quantity: number;
 }

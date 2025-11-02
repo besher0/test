@@ -71,4 +71,30 @@ export class ConversationController {
     const perPage = limit ? Math.max(1, Number(limit)) : 20;
     return this.convService.getMessages(id, pageNum, perPage);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('with/:otherId')
+  async findOrOpenConversation(
+    @CurrentUser() user: User,
+    @Param('otherId') otherId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = page ? Math.max(1, Number(page)) : 1;
+    const perPage = limit ? Math.max(1, Number(limit)) : 20;
+
+    // find existing conversation between the two users or create one
+    const conv = await this.convService.findOrCreateConversationBetween(
+      user,
+      otherId,
+    );
+    if (!conv) {
+      // should not happen, but guard anyway
+      return { conversation: null, messages: [] };
+    }
+
+    const msgs = await this.convService.getMessages(conv.id, pageNum, perPage);
+    return { conversation: conv, messages: msgs.messages };
+  }
 }

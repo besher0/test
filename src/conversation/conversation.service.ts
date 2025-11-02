@@ -66,14 +66,12 @@ export class ConversationService {
       .groupBy('p.conversationId')
       .having('COUNT(DISTINCT u.id) = :count', { count: 2 });
 
-    const rows = await subQ.getRawMany();
-    if (rows && rows.length > 0) {
-      const first = rows[0] as Record<string, any>;
-      const convIdRaw =
-        first['conversationId'] ??
-        first['p_conversationId'] ??
-        first.conversationId;
-      const convId = convIdRaw ? String(convIdRaw) : null;
+    type RawRow = { conversationId?: string; p_conversationId?: string };
+    const rawRows = await subQ.getRawMany();
+    if (rawRows.length > 0) {
+      const first = rawRows[0] as RawRow;
+      const convIdRaw = first.conversationId ?? first.p_conversationId;
+      const convId = convIdRaw ?? null;
       if (convId) {
         return this.conversationRepo.findOne({
           where: { id: convId },
@@ -178,22 +176,91 @@ export class ConversationService {
   async getUserConversations(userId: string, page = 1, perPage = 20) {
     const take = perPage;
     const skip = (page - 1) * take;
+    // Load conversations that include the given user and include participant user info
     const qb = this.conversationRepo
       .createQueryBuilder('c')
-      .leftJoin('c.participants', 'p')
-      .leftJoin('p.user', 'u')
-      .where('u.id = :userId', { userId })
+      // filter conversations where the current user is a participant using a subquery
+      .where(
+        'c.id IN (SELECT p.conversationId FROM participant p WHERE p.userId = :userId)',
+        { userId },
+      )
+      .leftJoinAndSelect('c.participants', 'p')
+      .leftJoinAndSelect('p.user', 'u')
+      // also load restaurants for participant users so we can pick the logo for business users
+      .leftJoinAndSelect('u.restaurants', 'ur')
       .orderBy('c.lastMessageAt', 'DESC')
       .take(take)
       .skip(skip);
-    const [items, total] = await qb.getManyAndCount();
+
+    const [items] = await qb.getManyAndCount();
+
+    // Map conversations to include participants' user info (lightweight)
+    const mapped = items.map((c) => ({
+      id: c.id,
+      title: c.title ?? null,
+      lastMessageAt: c.lastMessageAt ?? null,
+      // exclude the requesting user from the participants list
+      participants: (c.participants || [])
+        .filter(
+          (p) => String((p.user as User | undefined)?.id) !== String(userId),
+        )
+        .map((p) => {
+          // Type the participant user explicitly to avoid `any` and unsafe member access
+          const u = p.user as User | undefined;
+          // prefer profile picture by default
+          let picture = u?.profile_picture ?? null;
+          // if this user is a restaurant/store owner, prefer their restaurant logo if present
+          if (u && (u.userType === 'restaurant' || u.userType === 'store')) {
+            const rest = u.restaurants?.[0] ?? null;
+            if (rest && rest.logo_url) {
+              picture = rest.logo_url;
+            }
+          }
+          return {
+            id: u?.id ?? null,
+            firstName: u?.firstName ?? null,
+            lastName: u?.lastName ?? null,
+            email: u?.email ?? null,
+            profile_picture: picture,
+            role: p.role ?? null,
+          } as const;
+        }),
+    }));
+
+    // Deduplicate conversations by the set of other participant ids so the same
+    // other user(s) don't appear multiple times (keep the most-recent conv)
+    const dedupeMap = new Map<string, (typeof mapped)[0]>();
+    for (const conv of mapped) {
+      const others = conv.participants || [];
+      const otherIds = others
+        .map((o) => String(o.id))
+        .filter(Boolean)
+        .sort();
+      const key =
+        otherIds.length > 0 ? `g:${otherIds.join(',')}` : `c:${conv.id}`;
+      const existing = dedupeMap.get(key);
+      const convTime = conv.lastMessageAt
+        ? new Date(conv.lastMessageAt).getTime()
+        : 0;
+      const existingTime = existing?.lastMessageAt
+        ? new Date(existing.lastMessageAt).getTime()
+        : 0;
+      if (!existing || convTime > existingTime) {
+        dedupeMap.set(key, conv);
+      }
+    }
+
+    const deduped = Array.from(dedupeMap.values());
+    const totalDeduped = deduped.length;
+
     return {
       page,
       perPage: take,
-      total,
-      totalPages: Math.ceil(total / take),
-      isLastPage: total === 0 ? true : page >= Math.ceil(total / take),
-      conversations: items,
+      total: totalDeduped,
+      totalPages: Math.ceil(totalDeduped / take),
+      isLastPage:
+        totalDeduped === 0 ? true : page >= Math.ceil(totalDeduped / take),
+      conversations: deduped,
     };
   }
 
@@ -216,5 +283,19 @@ export class ConversationService {
       isLastPage: total === 0 ? true : page >= Math.ceil(total / take),
       messages: msgs,
     };
+  }
+
+  /**
+   * Check whether a given userId is a participant of a conversation
+   * Used by the WebSocket gateway to authorize joins
+   */
+  async isUserParticipant(conversationId: string, userId: string) {
+    const count = await this.participantRepo
+      .createQueryBuilder('p')
+      .innerJoin('p.user', 'u')
+      .where('p.conversationId = :conversationId', { conversationId })
+      .andWhere('u.id = :userId', { userId })
+      .getCount();
+    return count > 0;
   }
 }

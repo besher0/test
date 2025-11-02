@@ -25,7 +25,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from 'src/user/user.entity';
-import { PostService } from './post.service';
+import { PostService, PostResponse } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { ReactToPostDto } from './dto/react-to-post.dto';
@@ -58,9 +58,10 @@ export class PostController {
     @Body() dto: CreatePostDto,
     @Query('type') type: BusinessType,
     @UploadedFile() file?: Express.Multer.File,
-  ) {
+  ): Promise<PostResponse> {
     // pass the Multer file directly to the service; service will upload to Cloudinary
-    return this.postService.createPost(user, dto, type, file);
+    const created = await this.postService.createPost(user, dto, type, file);
+    return created;
   }
 
   @ApiBearerAuth()
@@ -85,8 +86,7 @@ export class PostController {
     return this.postService.deletePost(user, id);
   }
 
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalAuthGuard)
   @ApiOperation({ summary: 'Get posts by business type (restaurant/store)' })
   @Get('by-type/:type')
   @ApiQuery({
@@ -101,13 +101,13 @@ export class PostController {
   })
   async getPosts(
     @Param('type') type: BusinessType,
-    @CurrentUser() user: User,
+    @CurrentUser() user?: User,
     @Query('page') page?: string,
     @Query('limit') limitStr?: string,
   ) {
     const pageNum = page ? Math.max(1, Number(page)) : 1;
     const limit = limitStr ? Math.max(1, Math.min(100, Number(limitStr))) : 20;
-    return this.postService.getPostsForUser(type, user.id, {
+    return this.postService.getPostsForUser(type, user?.id, {
       page: pageNum,
       limit,
     });

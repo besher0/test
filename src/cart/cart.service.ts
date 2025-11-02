@@ -160,4 +160,40 @@ async removeItem(userId: string, itemId: string): Promise<Cart> {
     cart.total = 0;
     return this.cartRepo.save(cart);
   }
+
+  /**
+   * Update the quantity of a cart item. If quantity is 0, remove the item.
+   */
+  async updateItemQuantity(
+    userId: string,
+    itemId: string,
+    quantity: number,
+  ): Promise<Cart> {
+    if (quantity < 0) {
+      throw new BadRequestException('Quantity must be 0 or greater');
+    }
+
+    const cart = await this.getUserCart(userId);
+    if (!cart) throw new NotFoundException('Cart not found');
+
+    const item = cart.items.find((it) => it.id === itemId);
+    if (!item) {
+      throw new NotFoundException('Cart item not found');
+    }
+
+    if (quantity === 0) {
+      // remove the item
+      await this.cartItemRepo.delete(itemId);
+      cart.items = cart.items.filter((it) => it.id !== itemId);
+    } else {
+      // update quantity
+      await this.cartItemRepo.update(itemId, { quantity });
+      // reflect in-memory
+      const idx = cart.items.findIndex((it) => it.id === itemId);
+      if (idx >= 0) cart.items[idx].quantity = quantity;
+    }
+
+    cart.total = await this.calculateCartTotal(cart);
+    return this.cartRepo.save(cart);
+  }
 }

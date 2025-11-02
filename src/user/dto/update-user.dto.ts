@@ -7,6 +7,7 @@ import {
   IsISO8601,
   Matches,
   IsNotEmpty,
+  ValidateIf,
   IsOptional,
   IsUrl,
   // ValidateIf,
@@ -17,6 +18,7 @@ export class UpdateUserDto {
     description: 'First name',
     example: 'John', // أضفت مثال هنا
   })
+  @IsOptional()
   @IsString()
   @MinLength(3, { message: 'First name must be at least 3 characters long' })
   firstName?: string;
@@ -25,6 +27,7 @@ export class UpdateUserDto {
     description: 'Last name',
     example: 'Doe', // أضفت مثال
   })
+  @IsOptional()
   @IsString()
   @MinLength(3, { message: 'Last name must be at least 3 characters long' })
   lastName?: string;
@@ -33,6 +36,7 @@ export class UpdateUserDto {
     description: 'Birth date',
     example: '1990-05-15', // أضفت مثال (تاريخ ISO)
   })
+  @IsOptional()
   @IsISO8601({}, { message: 'Birth date must be a valid ISO 8601 date string' })
   birthDate?: string;
 
@@ -41,6 +45,7 @@ export class UpdateUserDto {
     description: 'Gender',
     example: 'male', // أضفت مثال
   })
+  @IsOptional()
   @IsEnum(['male', 'female'], {
     message: 'Gender must be either male or female',
   })
@@ -50,6 +55,7 @@ export class UpdateUserDto {
     description: 'Email',
     example: 'john.doe@example.com', // أضفت مثال
   })
+  @IsOptional()
   @IsEmail({}, { message: 'Email must be valid' })
   email?: string;
 
@@ -57,6 +63,7 @@ export class UpdateUserDto {
     description: 'Password',
     example: 'StrongPass123!', // أضفت مثال
   })
+  @IsOptional()
   @IsString()
   @MinLength(6, { message: 'Password must be at least 6 characters long' })
   @Matches(/((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {
@@ -69,6 +76,8 @@ export class UpdateUserDto {
     description: 'Confirm password',
     example: 'StrongPass123!', // أضفت مثال (يطابق الـ password)
   })
+  @IsOptional()
+  @ValidateIf((o: UpdateUserDto) => o.password !== undefined)
   @IsString()
   @IsNotEmpty({ message: 'Confirm password is required' })
   confirmPassword?: string;
@@ -90,6 +99,7 @@ export class UpdateUserDto {
     description: 'User type',
     example: 'normalUser', // أضفت مثال
   })
+  @IsOptional()
   @IsEnum(['normalUser', 'admin', 'restaurant', 'store'], {
     message: 'User type must be normalUser, admin, restaurant, or store',
   })

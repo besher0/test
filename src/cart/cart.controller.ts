@@ -16,8 +16,10 @@ import {
   ApiOperation,
   ApiResponse,
   ApiTags,
+  ApiParam,
 } from '@nestjs/swagger';
 import { AddToCartDto } from './dto/dto.createCart';
+import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { User } from 'src/user/user.entity';
 import { AddMultipleToCartDto } from './dto/add-multiple-to-cart.dto';
 
@@ -91,5 +93,51 @@ export class CartController {
   @ApiResponse({ status: 200, description: 'Success' })
   clearCart(@CurrentUser() user: User) {
     return this.cartService.clearCart(user.id);
+  }
+
+  @Post(':itemId/quantity')
+  @ApiOperation({
+    summary: 'Update quantity for a cart item (set 0 to remove)',
+  })
+  @ApiParam({
+    name: 'itemId',
+    description: 'Cart item id',
+    example: 'c1a2b3d4',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Updated cart returned',
+    schema: {
+      example: {
+        id: 'cart-123',
+        userId: 'user-456',
+        items: [
+          {
+            id: 'item-1',
+            mealId: 'meal-789',
+            quantity: 3,
+            name: 'Pizza Margherita',
+            price: 12.5,
+            mealImage: 'https://res.cloudinary.com/.../pizza.jpg',
+          },
+        ],
+        total: 37.5,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad Request (e.g., negative quantity or adding from multiple restaurants)',
+  })
+  @ApiResponse({ status: 404, description: 'Cart or cart item not found' })
+  @ApiBody({ type: UpdateCartItemDto })
+  async updateQuantity(
+    @CurrentUser() user: User,
+    @Param('itemId') itemId: string,
+    @Body() body: UpdateCartItemDto,
+  ) {
+    const { quantity } = body;
+    return await this.cartService.updateItemQuantity(user.id, itemId, quantity);
   }
 }

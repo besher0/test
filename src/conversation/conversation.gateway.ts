@@ -61,13 +61,36 @@ export class ConversationGateway
   }
 
   @SubscribeMessage('join')
-  handleJoin(client: AuthenticatedSocket, payload: { conversationId: string }) {
-    client.join(payload.conversationId);
-    this.server.to(payload.conversationId).emit('participant_joined', {
-      conversationId: payload.conversationId,
-      participantId: client.user?.sub,
-      joinedAt: new Date(),
-    });
+  async handleJoin(
+    client: AuthenticatedSocket,
+    payload: { conversationId: string },
+  ) {
+    try {
+      const convId = payload.conversationId;
+      if (!convId) {
+        client.emit('join_error', { message: 'conversationId is required' });
+        return;
+      }
+      const userId = client.user?.sub;
+      if (!userId) {
+        client.emit('join_error', { message: 'unauthenticated' });
+        return;
+      }
+      const allowed = await this.convService.isUserParticipant(convId, userId);
+      if (!allowed) {
+        client.emit('join_error', { message: 'not a participant' });
+        return;
+      }
+      client.join(convId);
+      this.server.to(convId).emit('participant_joined', {
+        conversationId: convId,
+        participantId: userId,
+        joinedAt: new Date(),
+      });
+    } catch (err) {
+      this.logger.warn('handleJoin failed: ' + String(err));
+      client.emit('join_error', { message: 'join failed' });
+    }
   }
 
   @SubscribeMessage('leave')

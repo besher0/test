@@ -6,6 +6,7 @@ import {
   Param,
   Delete,
   Put,
+  UseGuards,
   UseInterceptors,
   UploadedFiles,
 } from '@nestjs/common';
@@ -21,6 +22,10 @@ import {
 } from '@nestjs/swagger';
 import { Country } from './county.entity';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/auth/decorator/roles.decorator';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Countries')
 @Controller('countries')
@@ -28,6 +33,9 @@ export class CountryController {
   constructor(private readonly countryService: CountryService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new country with image (Cloudinary)' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, type: Country })

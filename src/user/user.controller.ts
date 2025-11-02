@@ -9,6 +9,8 @@ import {
   UseGuards,
   HttpException,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from '../user/dto/create-user.dto';
@@ -26,9 +28,12 @@ import {
   ApiUnauthorizedResponse,
   ApiForbiddenResponse,
 } from '@nestjs/swagger';
+import { ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from 'src/auth/decorator/current-user.decorator';
 import { User } from './user.entity';
 import { LoginDto } from './dto/login-dto';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @ApiTags('users')
 @Controller('users')
@@ -36,6 +41,7 @@ export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly authService: AuthService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   @Post('register')
@@ -209,10 +215,26 @@ export class UserController {
   @Put(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update a user' })
+  @UseInterceptors(FileInterceptor('profile_picture'))
+  @ApiConsumes('multipart/form-data')
   @ApiBody({
-    type: UpdateUserDto,
-    description: 'User update data',
+    description:
+      'User update data (multipart/form-data). Use `profile_picture` to upload a file.',
+    schema: {
+      type: 'object',
+      properties: {
+        profile_picture: { type: 'string', format: 'binary' },
+        firstName: { type: 'string' },
+        lastName: { type: 'string' },
+        email: { type: 'string' },
+        password: { type: 'string' },
+        confirmPassword: { type: 'string' },
+        gender: { type: 'string' },
+        birthDate: { type: 'string', format: 'date' },
+        latitude: { type: 'number' },
+        longitude: { type: 'number' },
+      },
+    },
   })
   @ApiResponse({
     status: 200,
@@ -250,8 +272,9 @@ export class UserController {
     },
   })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
-  update(
+  async update(
     @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
     @Body() updateUserDto: UpdateUserDto,
     @CurrentUser() currentUser: User,
   ) {
@@ -261,6 +284,25 @@ export class UserController {
         HttpStatus.FORBIDDEN,
       );
     }
+
+    // If a file was uploaded, push it to Cloudinary and set profile_picture URL
+    if (file && file.buffer) {
+      try {
+        const upload = await this.cloudinaryService.uploadImage(
+          file,
+          `users/${id}`,
+        );
+        updateUserDto.profile_picture = upload.secure_url;
+      } catch (err) {
+        // log and return 500
+        console.warn('cloudinary upload failed', err);
+        throw new HttpException(
+          'Failed to upload profile picture',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
+
     return this.userService.update(id, updateUserDto);
   }
 

@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Post } from './post.entity';
 import { PostReaction } from './post-reaction.entity';
 import { User } from 'src/user/user.entity';
@@ -12,7 +12,38 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { ReactToPostDto } from './dto/react-to-post.dto';
 import { Restaurant } from 'src/restaurant/restaurant.entity';
+import { Follow } from 'src/follow/follow.entity';
 import { BusinessType } from 'src/common/business-type.enum';
+// Post response shape exported for controllers to use (typed)
+export interface PostResponse {
+  id: string;
+  text?: string | null;
+  mediaUrl?: string | null;
+  thumbnailUrl?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  restaurant: {
+    id: string;
+    name?: string;
+    location?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    identityImage1?: string | null;
+    identityImage2?: string | null;
+    logo_url?: string | null;
+    mainImage?: string | null;
+    description?: string | null;
+    workingHours?: string | null;
+    type?: BusinessType;
+    averageRating?: number | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+    owner?: { id: string; firstName?: string; lastName?: string } | null;
+  } | null;
+  reactions: { like: number; love: number; fire: number };
+  hasReacted: string | null;
+  isFollowed?: boolean;
+}
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
@@ -24,7 +55,9 @@ export class PostService {
     private readonly reactionRepo: Repository<PostReaction>,
     @InjectRepository(Restaurant)
     private readonly restaurantRepo: Repository<Restaurant>,
-    
+    @InjectRepository(Follow)
+    private readonly followRepo: Repository<Follow>,
+
     private readonly cloudinaryService: CloudinaryService,
   ) {}
 
@@ -34,7 +67,7 @@ export class PostService {
     dto: CreatePostDto,
     type: BusinessType,
     file?: Express.Multer.File,
-  ): Promise<Post> {
+  ): Promise<PostResponse> {
     const typeString =
       type === BusinessType.RESTAURANT ? 'restaurant' : 'store';
 
@@ -83,7 +116,24 @@ export class PostService {
       restaurant: { id: restaurant.id },
     });
 
-    return this.postRepo.save(post);
+    const saved = await this.postRepo.save(post);
+
+    // load relations and return mapped shape like GET /posts
+    const full = await this.postRepo.findOne({
+      where: { id: saved.id },
+      relations: [
+        'restaurant',
+        'restaurant.owner',
+        'reactions',
+        'reactions.user',
+      ],
+    });
+
+    if (!full) {
+      // should not happen — saved post should be reloadable with relations
+      throw new NotFoundException('Failed to load post after save');
+    }
+    return this.mapPost(full, user.id);
   }
 
   // Update post — only owner of restaurant
@@ -129,7 +179,7 @@ export class PostService {
     user: User,
     postId: string,
     type: ReactToPostDto['type'],
-  ): Promise<PostReaction> {
+  ): Promise<PostReaction | { removed: true }> {
     const post = await this.postRepo.findOne({ where: { id: postId } });
 
     if (!post) {
@@ -140,22 +190,29 @@ export class PostService {
       where: { post: { id: postId }, user: { id: user.id } },
     });
 
+    // Toggle behavior: if user already reacted with the same type, remove the reaction.
     if (reaction) {
+      if (reaction.type === type) {
+        await this.reactionRepo.remove(reaction);
+        // return a simple marker so controller/client can know it was removed
+        return { removed: true };
+      }
       reaction.type = type;
-    } else {
-      reaction = this.reactionRepo.create({ post, user, type });
+      return this.reactionRepo.save(reaction);
     }
 
+    reaction = this.reactionRepo.create({ post, user, type });
     return this.reactionRepo.save(reaction);
   }
 
   // Get posts visible to user (page/limit pagination). Exclude posts belonging to restaurants owned by the requesting user.
   async getPostsForUser(
     type: BusinessType,
-    userId: string,
+    userId?: string,
     opts?: { limit?: number; page?: number },
   ) {
-    const limit = opts?.limit && Number(opts.limit) > 0 ? Number(opts.limit) : 20;
+    const limit =
+      opts?.limit && Number(opts.limit) > 0 ? Number(opts.limit) : 20;
     const page = opts?.page && Number(opts.page) > 0 ? Number(opts.page) : 1;
     const skip = (page - 1) * limit;
 
@@ -183,64 +240,92 @@ export class PostService {
       });
     }
 
-    qb.orderBy('post.createdAt', 'DESC').addOrderBy('post.id', 'DESC').skip(skip).take(limit);
+    qb.orderBy('post.createdAt', 'DESC')
+      .addOrderBy('post.id', 'DESC')
+      .skip(skip)
+      .take(limit);
 
     const [posts, total] = await qb.getManyAndCount();
 
     // (matchingStoryId feature removed) no story lookup performed
 
-    const mapped = posts.map((post) => {
-      const reactionsCount = {
-        like: post.reactions?.filter((r) => r.type === 'like').length ?? 0,
-        love: post.reactions?.filter((r) => r.type === 'love').length ?? 0,
-        fire: post.reactions?.filter((r) => r.type === 'fire').length ?? 0,
-      };
+    // determine which restaurants the user follows (if userId provided)
+    let followedSet: Set<string> | undefined;
+    if (userId) {
+      const restaurantIds = posts
+        .map((p) => p.restaurant?.id)
+        .filter((id): id is string => !!id);
+      if (restaurantIds.length > 0) {
+        const follows = await this.followRepo.find({
+          where: { user: { id: userId }, restaurant: In(restaurantIds) },
+          relations: ['restaurant'],
+        });
+        followedSet = new Set(follows.map((f) => f.restaurant.id));
+      }
+    }
 
-      const userReaction = post.reactions?.find((r) => r.user.id === userId);
-
-      // matchingStoryId removed - do not compute matching story
-
-      const rest = post.restaurant;
-      const restaurantFull = rest
-        ? {
-            id: rest.id,
-            name: rest.name,
-            location: rest.location,
-            latitude: rest.latitude,
-            longitude: rest.longitude,
-            identityImage1: rest.identityImage1 ?? null,
-            identityImage2: rest.identityImage2 ?? null,
-            logo_url: rest.logo_url,
-            mainImage: rest.mainImage,
-            description: rest.description,
-            workingHours: rest.workingHours,
-            type: rest.type,
-            averageRating: rest.averageRating,
-            createdAt: rest.createdAt,
-            updatedAt: rest.updatedAt,
-            owner: rest.owner
-              ? {
-                  id: rest.owner.id,
-                  firstName: rest.owner.firstName,
-                  lastName: rest.owner.lastName,
-                }
-              : null,
-          }
-        : null;
-
-      return {
-        id: post.id,
-        text: post.text,
-        mediaUrl: post.mediaUrl,
-        thumbnailUrl: post.thumbnailUrl,
-        createdAt: post.createdAt,
-        updatedAt: post.updatedAt,
-        restaurant: restaurantFull,
-        reactions: reactionsCount,
-        hasReacted: userReaction ? userReaction.type : null,
-      };
-    });
+    const mapped = posts.map((post) => this.mapPost(post, userId, followedSet));
 
     return { items: mapped, page, limit, total };
+  }
+
+  private mapPost(
+    post: Post,
+    userId?: string,
+    followedSet?: Set<string>,
+  ): PostResponse {
+    const reactionsCount = {
+      like: post.reactions?.filter((r) => r.type === 'like').length ?? 0,
+      love: post.reactions?.filter((r) => r.type === 'love').length ?? 0,
+      fire: post.reactions?.filter((r) => r.type === 'fire').length ?? 0,
+    };
+
+    const userReaction = userId
+      ? post.reactions?.find((r) => r.user.id === userId)
+      : undefined;
+
+    const rest = post.restaurant;
+    const restaurantFull = rest
+      ? {
+          id: rest.id,
+          name: rest.name,
+          location: rest.location,
+          latitude: rest.latitude,
+          longitude: rest.longitude,
+          identityImage1: rest.identityImage1 ?? null,
+          identityImage2: rest.identityImage2 ?? null,
+          logo_url: rest.logo_url,
+          mainImage: rest.mainImage,
+          description: rest.description,
+          workingHours: rest.workingHours,
+          type: rest.type,
+          averageRating: rest.averageRating,
+          createdAt: rest.createdAt,
+          updatedAt: rest.updatedAt,
+          owner: rest.owner
+            ? {
+                id: rest.owner.id,
+                firstName: rest.owner.firstName,
+                lastName: rest.owner.lastName,
+              }
+            : null,
+        }
+      : null;
+
+    return {
+      id: post.id,
+      text: post.text,
+      mediaUrl: post.mediaUrl,
+      thumbnailUrl: post.thumbnailUrl,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      restaurant: restaurantFull,
+      reactions: reactionsCount,
+      hasReacted: userReaction ? userReaction.type : null,
+      isFollowed:
+        restaurantFull && followedSet
+          ? followedSet.has(restaurantFull.id)
+          : false,
+    };
   }
 }

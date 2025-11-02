@@ -133,9 +133,11 @@ export class RestaurantService {
     });
 
     // اذا المستخدم دخل كود احالة، اربط المطعم بالمرجع
-    if ((dto as any).referralCodeUsed) {
-      const code = (dto as any).referralCodeUsed;
-      const ref = await this.restaurantRepo.findOne({ where: { referralCode: code } });
+    if (dto.referralCodeUsed) {
+      const code = dto.referralCodeUsed;
+      const ref = await this.restaurantRepo.findOne({
+        where: { referralCode: code },
+      });
       if (ref) {
         restaurant.referredBy = ref;
       }

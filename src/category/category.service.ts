@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import {
+  //In,
+  Repository,
+} from 'typeorm';
 import { Category } from '../category/category.entity';
 import { CreateCategoryDto } from '../category/dto/create-category.dto';
 import { UpdateCategoryDto } from '../category/dto/update-category.dto';
@@ -84,57 +87,57 @@ export class CategoryService {
       .then(() => this.findOne(id));
   }
 
-  remove(id: number): Promise<void> {
+  remove(id: string): Promise<void> {
     return this.categoryRepository.delete(id).then();
   }
 
-  async getFavoriteFoodCategories() {
-    // قائمة الأصناف الستة المحددة للأكل المفضل
-    const foodCategories = [
-      'لحمة',
-      'رز',
-      'مشروبات',
-      'حلويات',
-      'برغر',
-      'معكرونة',
-    ];
+  // async getFavoriteFoodCategories() {
+  //   // قائمة الأصناف الستة المحددة للأكل المفضل
+  //   const foodCategories = [
+  //     'لحمة',
+  //     'رز',
+  //     'مشروبات',
+  //     'حلويات',
+  //     'برغر',
+  //     'معكرونة',
+  //   ];
 
-    // جلب الأصناف من قاعدة البيانات مع روابط الصور إن وجدت
-    const categories = await this.categoryRepository.find({
-      where: { name: In(foodCategories) },
-      select: ['name', 'image_url'],
-    });
+  //   // جلب الأصناف من قاعدة البيانات مع روابط الصور إن وجدت
+  //   const categories = await this.categoryRepository.find({
+  //     where: { name: In(foodCategories) },
+  //     select: ['name', 'image_url'],
+  //   });
 
-    // تحويل الأصناف إلى صيغة الاستجابة مع إضافة الصور
-    return {
-      category: foodCategories.slice(0, 6).map((category) => {
-        const dbCategory = categories.find((c) => c.name === category);
-        return {
-          name: category,
-          id: dbCategory?.id,
-          imageUrl: dbCategory?.image_url || undefined,
-        };
-      }),
-    };
-  }
+  //   // تحويل الأصناف إلى صيغة الاستجابة مع إضافة الصور
+  //   return {
+  //     category: foodCategories.slice(0, 6).map((category) => {
+  //       const dbCategory = categories.find((c) => c.name === category);
+  //       return {
+  //         name: category,
+  //         id: dbCategory?.id,
+  //         imageUrl: dbCategory?.image_url || undefined,
+  //       };
+  //     }),
+  //   };
+  // }
 
-  async uploadCategoryImage(
-    id: string,
-    file: Express.Multer.File,
-  ): Promise<{ message: string; imageUrl: string }> {
-    const category = await this.findOne(id);
+  // async uploadCategoryImage(
+  //   id: string,
+  //   file: Express.Multer.File,
+  // ): Promise<{ message: string; imageUrl: string }> {
+  //   const category = await this.findOne(id);
 
-    const result = await this.cloudinaryService.uploadImage(
-      file,
-      `categories/${category.name}`,
-    );
+  //   const result = await this.cloudinaryService.uploadImage(
+  //     file,
+  //     `categories/${category.name}`,
+  //   );
 
-    category.image_url = result.secure_url;
-    await this.categoryRepository.save(category);
+  //   category.image_url = result.secure_url;
+  //   await this.categoryRepository.save(category);
 
-    return {
-      message: `Image uploaded successfully for category ${category.name}`,
-      imageUrl: result.secure_url,
-    };
-  }
+  //   return {
+  //     message: `Image uploaded successfully for category ${category.name}`,
+  //     imageUrl: result.secure_url,
+  //   };
+  // }
 }
